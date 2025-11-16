@@ -1,0 +1,496 @@
+import React from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Dimensions,
+  TouchableOpacity,
+} from "react-native";
+import { tripData } from "../../data/tripdata";
+import COLORS from "../../assets/colors";
+import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
+
+const { width } = Dimensions.get("window");
+
+export default function Dashboard() {
+  // Calculate KPIs
+  const calculateKPIs = () => {
+    const totalTrips = tripData.length;
+
+    // Total distance
+    const totalDistance = tripData.reduce((sum, trip) => {
+      return (
+        sum + (Number(trip.endingOdometer) - Number(trip.startingOdometer))
+      );
+    }, 0);
+
+    // Average distance per trip
+    const avgDistance = totalDistance / totalTrips;
+
+    // Total duration in hours
+    const totalDuration = tripData.reduce((sum, trip) => {
+      const start = new Date(trip.startTimestamp).getTime();
+      const end = new Date(trip.endTimestamp).getTime();
+      return sum + (end - start);
+    }, 0);
+    const totalDurationHours = totalDuration / (1000 * 60 * 60);
+
+    // Average duration per trip
+    const avgDurationHours = totalDurationHours / totalTrips;
+
+    // Longest trip
+    const longestTrip = tripData.reduce((max, trip) => {
+      const distance =
+        Number(trip.endingOdometer) - Number(trip.startingOdometer);
+      return distance > max ? distance : max;
+    }, 0);
+
+    // Shortest trip
+    const shortestTrip = tripData.reduce((min, trip) => {
+      const distance =
+        Number(trip.endingOdometer) - Number(trip.startingOdometer);
+      return distance < min ? distance : min;
+    }, Infinity);
+
+    // This week's trips
+    const now = new Date();
+    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const thisWeekTrips = tripData.filter((trip) => {
+      const tripDate = new Date(trip.startTimestamp);
+      return tripDate >= weekAgo && tripDate <= now;
+    }).length;
+
+    // This month's trips
+    const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const thisMonthTrips = tripData.filter((trip) => {
+      const tripDate = new Date(trip.startTimestamp);
+      return tripDate >= monthAgo && tripDate <= now;
+    }).length;
+
+    // Current odometer
+    const currentOdometer =
+      tripData[tripData.length - 1]?.endingOdometer || "0";
+
+    // Average speed (distance/duration)
+    const avgSpeed = totalDistance / totalDurationHours;
+
+    return {
+      totalTrips,
+      totalDistance: totalDistance.toFixed(1),
+      avgDistance: avgDistance.toFixed(1),
+      totalDurationHours: totalDurationHours.toFixed(1),
+      avgDurationHours: avgDurationHours.toFixed(1),
+      longestTrip: longestTrip.toFixed(1),
+      shortestTrip: shortestTrip.toFixed(1),
+      thisWeekTrips,
+      thisMonthTrips,
+      currentOdometer,
+      avgSpeed: avgSpeed.toFixed(1),
+    };
+  };
+
+  const kpis = calculateKPIs();
+
+  return (
+    <View style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.headerLeft}>
+          <Text style={styles.headerTitle}>Dashboard</Text>
+          <Text style={styles.headerSubtitle}>Your trip statistics</Text>
+        </View>
+        <TouchableOpacity
+          style={styles.exportButton}
+          onPress={() => router.push("/Export")}
+        >
+          <Ionicons name="download-outline" size={24} color="#fff" />
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {/* Primary Stats */}
+        <View style={styles.primaryRow}>
+          <View
+            style={[styles.primaryCard, { backgroundColor: COLORS.primary }]}
+          >
+            <Ionicons name="car" size={32} color="#fff" />
+            <Text style={styles.primaryValue}>{kpis.totalTrips}</Text>
+            <Text style={styles.primaryLabel}>Total Trips</Text>
+          </View>
+
+          <View
+            style={[styles.primaryCard, { backgroundColor: COLORS.accent }]}
+          >
+            <Ionicons name="speedometer" size={32} color="#fff" />
+            <Text style={styles.primaryValue}>{kpis.currentOdometer}</Text>
+            <Text style={styles.primaryLabel}>Current Odometer</Text>
+          </View>
+        </View>
+
+        {/* Distance Stats */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Distance Analytics</Text>
+          <View style={styles.statsGrid}>
+            <View style={styles.statCard}>
+              <View
+                style={[
+                  styles.iconCircle,
+                  { backgroundColor: COLORS.primary + "20" },
+                ]}
+              >
+                <Ionicons name="navigate" size={24} color={COLORS.primary} />
+              </View>
+              <Text style={styles.statValue}>{kpis.totalDistance} km</Text>
+              <Text style={styles.statLabel}>Total Distance</Text>
+            </View>
+
+            <View style={styles.statCard}>
+              <View
+                style={[
+                  styles.iconCircle,
+                  { backgroundColor: COLORS.success + "20" },
+                ]}
+              >
+                <Ionicons name="analytics" size={24} color={COLORS.success} />
+              </View>
+              <Text style={styles.statValue}>{kpis.avgDistance} km</Text>
+              <Text style={styles.statLabel}>Avg Per Trip</Text>
+            </View>
+
+            <View style={styles.statCard}>
+              <View
+                style={[
+                  styles.iconCircle,
+                  { backgroundColor: COLORS.warning + "20" },
+                ]}
+              >
+                <Ionicons name="trending-up" size={24} color={COLORS.warning} />
+              </View>
+              <Text style={styles.statValue}>{kpis.longestTrip} km</Text>
+              <Text style={styles.statLabel}>Longest Trip</Text>
+            </View>
+
+            <View style={styles.statCard}>
+              <View
+                style={[
+                  styles.iconCircle,
+                  { backgroundColor: COLORS.danger + "20" },
+                ]}
+              >
+                <Ionicons
+                  name="trending-down"
+                  size={24}
+                  color={COLORS.danger}
+                />
+              </View>
+              <Text style={styles.statValue}>{kpis.shortestTrip} km</Text>
+              <Text style={styles.statLabel}>Shortest Trip</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Time Stats */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Time Analytics</Text>
+          <View style={styles.timeRow}>
+            <View style={styles.timeCard}>
+              <Ionicons name="time" size={28} color={COLORS.primary} />
+              <Text style={styles.timeValue}>{kpis.totalDurationHours}h</Text>
+              <Text style={styles.timeLabel}>Total Duration</Text>
+            </View>
+
+            <View style={styles.timeCard}>
+              <Ionicons name="timer" size={28} color={COLORS.accent} />
+              <Text style={styles.timeValue}>{kpis.avgDurationHours}h</Text>
+              <Text style={styles.timeLabel}>Avg Duration</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Recent Activity */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Recent Activity</Text>
+          <View style={styles.activityRow}>
+            <View style={styles.activityCard}>
+              <View
+                style={[
+                  styles.activityIcon,
+                  { backgroundColor: COLORS.primary },
+                ]}
+              >
+                <Ionicons name="calendar" size={20} color="#fff" />
+              </View>
+              <Text style={styles.activityValue}>{kpis.thisWeekTrips}</Text>
+              <Text style={styles.activityLabel}>This Week</Text>
+            </View>
+
+            <View style={styles.activityCard}>
+              <View
+                style={[
+                  styles.activityIcon,
+                  { backgroundColor: COLORS.accent },
+                ]}
+              >
+                <Ionicons name="calendar-outline" size={20} color="#fff" />
+              </View>
+              <Text style={styles.activityValue}>{kpis.thisMonthTrips}</Text>
+              <Text style={styles.activityLabel}>This Month</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Quick Info */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Quick Info</Text>
+          <View style={styles.infoCard}>
+            <View style={styles.infoRow}>
+              <Ionicons
+                name="information-circle"
+                size={20}
+                color={COLORS.muted}
+              />
+              <Text style={styles.infoText}>
+                You've traveled an average of {kpis.avgDistance} km per trip
+              </Text>
+            </View>
+            <View style={styles.infoDivider} />
+            <View style={styles.infoRow}>
+              <Ionicons
+                name="checkmark-circle"
+                size={20}
+                color={COLORS.success}
+              />
+              <Text style={styles.infoText}>
+                Longest trip was {kpis.longestTrip} km
+              </Text>
+            </View>
+            <View style={styles.infoDivider} />
+            <View style={styles.infoRow}>
+              <Ionicons
+                name="speedometer-outline"
+                size={20}
+                color={COLORS.muted}
+              />
+              <Text style={styles.infoText}>
+                Current odometer reading: {kpis.currentOdometer} km
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={{ height: 100 }} />
+      </ScrollView>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  header: {
+    backgroundColor: COLORS.primary,
+    paddingTop: 60,
+    paddingBottom: 24,
+    paddingHorizontal: 20,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  headerLeft: {
+    flex: 1,
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: "bold",
+    color: "#fff",
+    marginBottom: 4,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: "#fff",
+    opacity: 0.9,
+  },
+  exportButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  content: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 16,
+  },
+  primaryRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 24,
+  },
+  primaryCard: {
+    flex: 1,
+    borderRadius: 16,
+    padding: 20,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  primaryValue: {
+    fontSize: 32,
+    fontWeight: "bold",
+    color: "#fff",
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  primaryLabel: {
+    fontSize: 14,
+    color: "#fff",
+    opacity: 0.9,
+  },
+  section: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: COLORS.text,
+    marginBottom: 12,
+  },
+  statsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+  },
+  statCard: {
+    width: (width - 48) / 2,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 16,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  iconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+  },
+  statValue: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: COLORS.text,
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: COLORS.muted,
+    textAlign: "center",
+  },
+  timeRow: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  timeCard: {
+    flex: 1,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 16,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  timeValue: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: COLORS.text,
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  timeLabel: {
+    fontSize: 11,
+    color: COLORS.muted,
+    textAlign: "center",
+  },
+  activityRow: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  activityCard: {
+    flex: 1,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 20,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  activityIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+  },
+  activityValue: {
+    fontSize: 28,
+    fontWeight: "bold",
+    color: COLORS.text,
+    marginBottom: 4,
+  },
+  activityLabel: {
+    fontSize: 13,
+    color: COLORS.muted,
+  },
+  infoCard: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  infoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  infoText: {
+    flex: 1,
+    fontSize: 14,
+    color: COLORS.text,
+    lineHeight: 20,
+  },
+  infoDivider: {
+    height: 1,
+    backgroundColor: COLORS.card,
+    marginVertical: 12,
+  },
+});
