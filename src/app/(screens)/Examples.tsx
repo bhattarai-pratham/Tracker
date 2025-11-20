@@ -1,8 +1,9 @@
-import React from "react";
-import { ScrollView, View, Text, StyleSheet, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import AppButton from "../components/AppButton";
-import COLORS from "../assets/colors";
+import React from "react";
+import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
+import COLORS from "../../assets/colors";
+import AppButton from "../../components/AppButton";
+import { supabase } from "../../functions/supabase";
 
 export default function ExampleButtons() {
   return (
@@ -108,6 +109,18 @@ export default function ExampleButtons() {
       </View>
 
       <View style={{ height: 40 }} />
+
+      <View style={styles.jsoncontainer}>
+        <Text>
+          {JSON.stringify(
+            {
+              connected: !!supabase,
+            },
+            null,
+            2
+          )}
+        </Text>
+      </View>
     </ScrollView>
   );
 }
@@ -134,5 +147,10 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     flexDirection: "row",
     alignItems: "center",
+  },
+  jsoncontainer: {
+    backgroundColor: COLORS.card,
+    padding: 12,
+    borderRadius: 8,
   },
 });

@@ -1,17 +1,54 @@
-import React from "react";
-import {
-  View,
-  Text,
-  FlatList,
-  StyleSheet,
-  TouchableOpacity,
-} from "react-native";
-import { tripData, Trip } from "../../data/tripdata";
-import COLORS from "../../assets/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import React, { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import COLORS from "../../assets/colors";
+import { Trip } from "../../data/tripdata";
+import { tripService } from "../../functions/tripService";
 
 const Trips = () => {
+  const [trips, setTrips] = useState<Trip[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchTrips = async () => {
+    try {
+      setError(null);
+      const { data, error } = await tripService.getAllTrips();
+
+      if (error) {
+        setError(error.message);
+        console.error("Error fetching trips:", error);
+      } else {
+        setTrips(data || []);
+      }
+    } catch (err) {
+      setError("Failed to fetch trips");
+      console.error("Error:", err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTrips();
+  }, []);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchTrips();
+  };
+
   const calculateDistance = (start: string, end: string) => {
     const distance = Number(end) - Number(start);
     return distance.toFixed(1);
@@ -54,11 +91,13 @@ const Trips = () => {
       <View style={styles.cardHeader}>
         <View style={styles.tripIdContainer}>
           <Ionicons name="calendar-outline" size={14} color={COLORS.muted} />
-          <Text style={styles.dateText}>{formatDate(item.startTimestamp)}</Text>
+          <Text style={styles.dateText}>
+            {formatDate(item.start_timestamp)}
+          </Text>
         </View>
         <View style={styles.distanceBadge}>
           <Text style={styles.distanceText}>
-            {calculateDistance(item.startingOdometer, item.endingOdometer)} km
+            {calculateDistance(item.starting_odometer, item.ending_odometer)} km
           </Text>
         </View>
       </View>
@@ -69,20 +108,20 @@ const Trips = () => {
         <View style={styles.infoItem}>
           <Ionicons name="speedometer-outline" size={16} color={COLORS.muted} />
           <Text style={styles.infoLabel}>Start</Text>
-          <Text style={styles.infoValue}>{item.startingOdometer}</Text>
+          <Text style={styles.infoValue}>{item.starting_odometer}</Text>
         </View>
         <View style={styles.verticalDivider} />
         <View style={styles.infoItem}>
           <Ionicons name="speedometer" size={16} color={COLORS.muted} />
           <Text style={styles.infoLabel}>End</Text>
-          <Text style={styles.infoValue}>{item.endingOdometer}</Text>
+          <Text style={styles.infoValue}>{item.ending_odometer}</Text>
         </View>
         <View style={styles.verticalDivider} />
         <View style={styles.infoItem}>
           <Ionicons name="time-outline" size={16} color={COLORS.muted} />
           <Text style={styles.infoLabel}>Duration</Text>
           <Text style={styles.infoValue}>
-            {calculateDuration(item.startTimestamp, item.endTimestamp)}
+            {calculateDuration(item.start_timestamp, item.end_timestamp)}
           </Text>
         </View>
       </View>
@@ -91,25 +130,74 @@ const Trips = () => {
 
       <View style={styles.dateRow}>
         <Text style={styles.dateText}>
-          {formatTime(item.startTimestamp)} - {formatTime(item.endTimestamp)}
+          {formatTime(item.start_timestamp)} - {formatTime(item.end_timestamp)}
         </Text>
       </View>
     </TouchableOpacity>
   );
 
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Trip History</Text>
+          <Text style={styles.subtitle}>Loading...</Text>
+        </View>
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+          <Text style={styles.loadingText}>Loading trips...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Trip History</Text>
+          <Text style={styles.subtitle}>Error loading trips</Text>
+        </View>
+        <View style={styles.centered}>
+          <Ionicons name="alert-circle" size={48} color={COLORS.danger} />
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={fetchTrips}>
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Trip History</Text>
-        <Text style={styles.subtitle}>{tripData.length} trips recorded</Text>
+        <Text style={styles.subtitle}>{trips.length} trips recorded</Text>
       </View>
 
       <FlatList
-        data={tripData}
+        data={trips}
         renderItem={renderTripCard}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={COLORS.primary}
+          />
+        }
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Ionicons name="car-outline" size={64} color={COLORS.muted} />
+            <Text style={styles.emptyText}>No trips yet</Text>
+            <Text style={styles.emptySubtext}>
+              Start your first trip to see it here
+            </Text>
+          </View>
+        }
       />
     </View>
   );
@@ -224,5 +312,50 @@ const styles = StyleSheet.create({
   dateText: {
     fontSize: 12,
     color: COLORS.muted,
+  },
+  centered: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: COLORS.muted,
+  },
+  errorText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: COLORS.danger,
+    textAlign: "center",
+  },
+  retryButton: {
+    marginTop: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    backgroundColor: COLORS.primary,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  emptyContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 60,
+  },
+  emptyText: {
+    fontSize: 20,
+    fontWeight: "600",
+    color: COLORS.text,
+    marginTop: 16,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: COLORS.muted,
+    marginTop: 8,
   },
 });

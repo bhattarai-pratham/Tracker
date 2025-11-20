@@ -1,27 +1,54 @@
-import React from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-} from "react-native";
-import { useLocalSearchParams, router } from "expo-router";
-import { tripData, Trip } from "../data/tripdata";
-import COLORS from "../assets/colors";
 import { Ionicons } from "@expo/vector-icons";
+import { router, useLocalSearchParams } from "expo-router";
+import React, { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import COLORS from "../../assets/colors";
+import { Trip } from "../../data/tripdata";
+import { tripService } from "../../functions/tripService";
 
 const TripDetail = () => {
   const { tripID } = useLocalSearchParams<{ tripID: string }>();
-  const trip = tripData.find((t) => t.id === tripID);
+  const [trip, setTrip] = useState<Trip | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  if (!trip) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.errorText}>Trip not found</Text>
-      </View>
-    );
-  }
+  useEffect(() => {
+    const fetchTrip = async () => {
+      if (!tripID) {
+        setError("No trip ID provided");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setError(null);
+        const { data, error } = await tripService.getTripByID(tripID);
+
+        if (error) {
+          setError(error.message);
+          console.error("Error fetching trip:", error);
+        } else if (!data) {
+          setError("Trip not found");
+        } else {
+          setTrip(data);
+        }
+      } catch (err) {
+        setError("Failed to fetch trip");
+        console.error("Error:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTrip();
+  }, [tripID]);
 
   const calculateDistance = (start: string, end: string) => {
     return (Number(end) - Number(start)).toFixed(1);
@@ -52,13 +79,65 @@ const TripDetail = () => {
     };
   };
 
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <Ionicons name="arrow-back" size={24} color="#fff" />
+          </TouchableOpacity>
+          <View style={styles.headerContent}>
+            <Text style={styles.headerTitle}>Trip Details</Text>
+            <Text style={styles.headerSubtitle}>Loading...</Text>
+          </View>
+        </View>
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+          <Text style={styles.loadingText}>Loading trip details...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (error || !trip) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <Ionicons name="arrow-back" size={24} color="#fff" />
+          </TouchableOpacity>
+          <View style={styles.headerContent}>
+            <Text style={styles.headerTitle}>Trip Details</Text>
+            <Text style={styles.headerSubtitle}>Error</Text>
+          </View>
+        </View>
+        <View style={styles.centered}>
+          <Ionicons name="alert-circle" size={64} color={COLORS.danger} />
+          <Text style={styles.errorText}>{error || "Trip not found"}</Text>
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={() => router.back()}
+          >
+            <Text style={styles.retryButtonText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
   const distance = calculateDistance(
-    trip.startingOdometer,
-    trip.endingOdometer!
+    trip.starting_odometer,
+    trip.ending_odometer
   );
-  const duration = calculateDuration(trip.startTimestamp, trip.endTimestamp!);
-  const startDateTime = formatDateTime(trip.startTimestamp);
-  const endDateTime = formatDateTime(trip.endTimestamp!);
+  const duration = calculateDuration(trip.start_timestamp, trip.end_timestamp);
+  const startDateTime = formatDateTime(trip.start_timestamp);
+  const endDateTime = formatDateTime(trip.end_timestamp);
 
   return (
     <View style={styles.container}>
@@ -110,7 +189,7 @@ const TripDetail = () => {
                 />
               </View>
               <Text style={styles.odometerLabel}>Starting</Text>
-              <Text style={styles.odometerValue}>{trip.startingOdometer}</Text>
+              <Text style={styles.odometerValue}>{trip.starting_odometer}</Text>
             </View>
 
             <View style={styles.arrowContainer}>
@@ -122,7 +201,7 @@ const TripDetail = () => {
                 <Ionicons name="speedometer" size={24} color={COLORS.danger} />
               </View>
               <Text style={styles.odometerLabel}>Ending</Text>
-              <Text style={styles.odometerValue}>{trip.endingOdometer}</Text>
+              <Text style={styles.odometerValue}>{trip.ending_odometer}</Text>
             </View>
           </View>
         </View>
@@ -208,6 +287,35 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 16,
+  },
+  centered: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: COLORS.muted,
+  },
+  errorText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: COLORS.danger,
+    textAlign: "center",
+  },
+  retryButton: {
+    marginTop: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    backgroundColor: COLORS.primary,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
   },
   mainCard: {
     backgroundColor: "#fff",
@@ -329,11 +437,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: COLORS.muted,
     marginTop: 12,
-  },
-  errorText: {
-    fontSize: 16,
-    color: COLORS.danger,
-    textAlign: "center",
-    marginTop: 100,
   },
 });

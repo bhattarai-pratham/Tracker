@@ -1,18 +1,20 @@
+import { router } from "expo-router";
+import { useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
+  Keyboard,
+  KeyboardAvoidingView,
   StyleSheet,
   Text,
-  View,
   TextInput,
-  Alert,
-  KeyboardAvoidingView,
-  Keyboard,
+  View,
 } from "react-native";
-import AppButton from "../components/AppButton";
-import { useTripContext } from "../context/TripContext";
-import { router } from "expo-router";
-import COLORS from "../assets/colors";
-
-import { generateTripId } from "../functions/Helpers";
+import COLORS from "../../assets/colors";
+import AppButton from "../../components/AppButton";
+import { useTripContext } from "../../context/TripContext";
+import { generateTripId } from "../../functions/Helpers";
+import { tripService } from "../../functions/tripService";
 
 const StartTrip = () => {
   const {
@@ -22,9 +24,12 @@ const StartTrip = () => {
     is_trip_active,
     setTripId,
     setStartingOdometer,
+    saveToStorage,
   } = useTripContext();
 
-  const handleTripStatusChange = () => {
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleTripStatusChange = async () => {
     if (!startingOdometer || isNaN(Number(startingOdometer))) {
       Alert.alert("Invalid Input", "Please enter a valid odometer reading");
       return;
@@ -34,50 +39,67 @@ const StartTrip = () => {
       return;
     }
 
-    const newTripID = generateTripId();
-    const newStartTimestamp = new Date();
+    setIsLoading(true);
 
-    setStartingOdometer(startingOdometer);
-    setTripId(newTripID);
-    setStartTimestamp(newStartTimestamp);
+    try {
+      const newTripID = generateTripId();
+      const newStartTimestamp = new Date();
 
-    setIsTripActive(true);
+      // Create trip in Supabase
+      const { data, error } = await tripService.createTrip({
+        id: newTripID,
+        starting_odometer: startingOdometer,
+        start_timestamp: newStartTimestamp.toISOString(),
+      });
 
-    Alert.alert(
-      "Trip Started",
-      `Trip ID: ${newTripID}\nStarting Odometer: ${startingOdometer}\nStart Time: ${newStartTimestamp.toLocaleString(
-        "en-US",
-        {
-          year: "numeric",
-          month: "2-digit",
-          day: "2-digit",
-          hour: "2-digit",
-          minute: "2-digit",
-        }
-      )}`,
-      [
-        {
-          text: "OK",
-          onPress: () => {
-            console.log(
-              "Trip started - ID:",
-              newTripID,
-              "Starting Odometer:",
-              startingOdometer,
-              "Start Time:",
-              newStartTimestamp.toLocaleString("en-US", {
-                year: "numeric",
-                month: "2-digit",
-                day: "2-digit",
-                hour: "2-digit",
-                minute: "2-digit",
-              })
-            );
-            router.back();
+      if (error) {
+        console.error("Error creating trip:", error);
+        Alert.alert(
+          "Error",
+          "Failed to create trip. Please check your connection and try again."
+        );
+        setIsLoading(false);
+        return;
+      }
+
+      // Update context state
+      setStartingOdometer(startingOdometer);
+      setTripId(newTripID);
+      setStartTimestamp(newStartTimestamp);
+      setIsTripActive(true);
+
+      // Save to AsyncStorage for persistence
+      await saveToStorage();
+
+      setIsLoading(false);
+
+      Alert.alert(
+        "Trip Started",
+        `Trip ID: ${newTripID}\nStarting Odometer: ${startingOdometer}\nStart Time: ${newStartTimestamp.toLocaleString(
+          "en-US",
+          {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+          }
+        )}`,
+        [
+          {
+            text: "OK",
+            onPress: () => {
+              console.log("Trip started successfully:", data);
+              router.back();
+            },
           },
-        },
-      ]
-    );
+        ]
+      );
+    } catch (err) {
+      console.error("Unexpected error:", err);
+      Alert.alert("Error", "An unexpected error occurred. Please try again.");
+      setIsLoading(false);
+    }
   };
 
   const handleTakePicture = () => {
@@ -121,8 +143,9 @@ const StartTrip = () => {
             variant="primary"
             shape="rounded"
             style={styles.startButton}
+            disabled={isLoading}
           >
-            Start Trip
+            {isLoading ? <ActivityIndicator color="#fff" /> : "Start Trip"}
           </AppButton>
         </View>
       </View>

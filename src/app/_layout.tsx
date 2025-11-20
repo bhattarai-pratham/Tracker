@@ -1,47 +1,43 @@
-import { useContext, useState } from "react";
-import { router, Stack } from "expo-router";
+import { router, Stack, usePathname } from "expo-router";
 import { StyleSheet, View } from "react-native";
-import AppButton from "../components/AppButton";
 import { EndTripIcon, StartTripIcon } from "../assets/Icons";
+import AppButton from "../components/AppButton";
 import { TripProvider, useTripContext } from "../context/TripContext";
 
 const RootLayoutContent = () => {
   const { is_trip_active } = useTripContext();
+  const pathname = usePathname();
 
+  // Hide button on StartTrip and EndTrip screens
+  const shouldHideButton =
+    pathname.includes("StartTrip") ||
+    pathname.includes("EndTrip") ||
+    pathname.includes("Export");
   return (
     <>
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" />
-        <Stack.Screen
-          name="StartTrip"
-          options={{
-            presentation: "modal",
-          }}
-        />
-        <Stack.Screen
-          name="EndTrip"
-          options={{
-            presentation: "modal",
-          }}
-        />
+        <Stack.Screen name="(screens)" />
       </Stack>
-      <View style={styles.buttonContainer}>
-        <AppButton
-          onPress={() => {
-            if (!is_trip_active) {
-              router.push("/StartTrip");
-            } else {
-              router.push("/EndTrip");
-            }
-          }}
-          size="lg"
-          variant={is_trip_active ? "danger" : "primary"}
-          shape="circle"
-          style={styles.button}
-        >
-          {is_trip_active ? <EndTripIcon /> : <StartTripIcon />}
-        </AppButton>
-      </View>
+      {!shouldHideButton && (
+        <View style={styles.buttonContainer}>
+          <AppButton
+            onPress={() => {
+              if (!is_trip_active) {
+                router.push("/(screens)/StartTrip");
+              } else {
+                router.push("/(screens)/EndTrip");
+              }
+            }}
+            size="lg"
+            variant={is_trip_active ? "danger" : "primary"}
+            shape="circle"
+            style={styles.button}
+          >
+            {is_trip_active ? <EndTripIcon /> : <StartTripIcon />}
+          </AppButton>
+        </View>
+      )}
     </>
   );
 };

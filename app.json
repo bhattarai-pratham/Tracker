@@ -8,33 +8,28 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.anonymous.trackerv2"
     },
     "android": {
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.anonymous.trackerv2",
+      "adaptiveIcon": {
+        "backgroundColor": "#ffffff"
+      }
     },
     "web": {
       "output": "static"
     },
-    "plugins": [
-      "expo-router",
-      [
-        "expo-splash-screen",
-        {
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200,
-          "resizeMode": "contain",
-          "backgroundColor": "#ffffff",
-          "dark": {
-            "backgroundColor": "#000000"
-          }
-        }
-      ]
-    ],
+    "plugins": ["expo-router"],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "splash": {
+      "backgroundColor": "#ffffff",
+      "resizeMode": "contain"
     }
   }
 }

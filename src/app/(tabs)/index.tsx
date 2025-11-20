@@ -1,28 +1,81 @@
-import React from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Dimensions,
-  TouchableOpacity,
-} from "react-native";
-import { tripData } from "../../data/tripdata";
-import COLORS from "../../assets/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import React, { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Dimensions,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import COLORS from "../../assets/colors";
+import { Trip } from "../../data/tripdata";
+import { tripService } from "../../functions/tripService";
 
 const { width } = Dimensions.get("window");
 
 export default function Dashboard() {
+  const [trips, setTrips] = useState<Trip[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchTrips = async () => {
+    try {
+      setError(null);
+      const { data, error } = await tripService.getAllTrips();
+
+      if (error) {
+        setError(error.message);
+        console.error("Error fetching trips:", error);
+      } else {
+        setTrips(data || []);
+      }
+    } catch (err) {
+      setError("Failed to fetch trips");
+      console.error("Error:", err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTrips();
+  }, []);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchTrips();
+  };
+
   // Calculate KPIs
   const calculateKPIs = () => {
-    const totalTrips = tripData.length;
+    if (trips.length === 0) {
+      return {
+        totalTrips: 0,
+        totalDistance: "0.0",
+        avgDistance: "0.0",
+        totalDurationHours: "0.0",
+        avgDurationHours: "0.0",
+        longestTrip: "0.0",
+        shortestTrip: "0.0",
+        thisWeekTrips: 0,
+        thisMonthTrips: 0,
+        currentOdometer: "0",
+        avgSpeed: "0.0",
+      };
+    }
+
+    const totalTrips = trips.length;
 
     // Total distance
-    const totalDistance = tripData.reduce((sum, trip) => {
+    const totalDistance = trips.reduce((sum, trip) => {
       return (
-        sum + (Number(trip.endingOdometer) - Number(trip.startingOdometer))
+        sum + (Number(trip.ending_odometer) - Number(trip.starting_odometer))
       );
     }, 0);
 
@@ -30,9 +83,9 @@ export default function Dashboard() {
     const avgDistance = totalDistance / totalTrips;
 
     // Total duration in hours
-    const totalDuration = tripData.reduce((sum, trip) => {
-      const start = new Date(trip.startTimestamp).getTime();
-      const end = new Date(trip.endTimestamp).getTime();
+    const totalDuration = trips.reduce((sum, trip) => {
+      const start = new Date(trip.start_timestamp).getTime();
+      const end = new Date(trip.end_timestamp).getTime();
       return sum + (end - start);
     }, 0);
     const totalDurationHours = totalDuration / (1000 * 60 * 60);
@@ -41,37 +94,41 @@ export default function Dashboard() {
     const avgDurationHours = totalDurationHours / totalTrips;
 
     // Longest trip
-    const longestTrip = tripData.reduce((max, trip) => {
+    const longestTrip = trips.reduce((max, trip) => {
       const distance =
-        Number(trip.endingOdometer) - Number(trip.startingOdometer);
+        Number(trip.ending_odometer) - Number(trip.starting_odometer);
       return distance > max ? distance : max;
     }, 0);
 
     // Shortest trip
-    const shortestTrip = tripData.reduce((min, trip) => {
+    const shortestTrip = trips.reduce((min, trip) => {
       const distance =
-        Number(trip.endingOdometer) - Number(trip.startingOdometer);
+        Number(trip.ending_odometer) - Number(trip.starting_odometer);
       return distance < min ? distance : min;
     }, Infinity);
 
     // This week's trips
     const now = new Date();
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const thisWeekTrips = tripData.filter((trip) => {
-      const tripDate = new Date(trip.startTimestamp);
+    const thisWeekTrips = trips.filter((trip) => {
+      const tripDate = new Date(trip.start_timestamp);
       return tripDate >= weekAgo && tripDate <= now;
     }).length;
 
     // This month's trips
     const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    const thisMonthTrips = tripData.filter((trip) => {
-      const tripDate = new Date(trip.startTimestamp);
+    const thisMonthTrips = trips.filter((trip) => {
+      const tripDate = new Date(trip.start_timestamp);
       return tripDate >= monthAgo && tripDate <= now;
     }).length;
 
-    // Current odometer
+    // Current odometer - get the most recent trip's ending odometer
+    // If ending_odometer is null or "0", fall back to starting_odometer
+    const latestTrip = trips[0]; // trips are already sorted by start_timestamp descending
     const currentOdometer =
-      tripData[tripData.length - 1]?.endingOdometer || "0";
+      latestTrip?.ending_odometer && latestTrip.ending_odometer !== "0"
+        ? latestTrip.ending_odometer
+        : latestTrip?.starting_odometer || "0";
 
     // Average speed (distance/duration)
     const avgSpeed = totalDistance / totalDurationHours;
@@ -93,6 +150,52 @@ export default function Dashboard() {
 
   const kpis = calculateKPIs();
 
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <View style={styles.headerLeft}>
+            <Text style={styles.headerTitle}>Dashboard</Text>
+            <Text style={styles.headerSubtitle}>Loading...</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.exportButton}
+            onPress={() => router.push("/Export")}
+          >
+            <Ionicons name="download-outline" size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+          <Text style={styles.loadingText}>Loading dashboard...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <View style={styles.headerLeft}>
+            <Text style={styles.headerTitle}>Dashboard</Text>
+            <Text style={styles.headerSubtitle}>Error loading data</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.exportButton}
+            onPress={() => router.push("/Export")}
+          >
+            <Ionicons name="download-outline" size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.centered}>
+          <Ionicons name="alert-circle" size={64} color={COLORS.danger} />
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -113,6 +216,14 @@ export default function Dashboard() {
         style={styles.content}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={COLORS.primary}
+            colors={[COLORS.primary]}
+          />
+        }
       >
         {/* Primary Stats */}
         <View style={styles.primaryRow}>
@@ -241,45 +352,6 @@ export default function Dashboard() {
               </View>
               <Text style={styles.activityValue}>{kpis.thisMonthTrips}</Text>
               <Text style={styles.activityLabel}>This Month</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Quick Info */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Quick Info</Text>
-          <View style={styles.infoCard}>
-            <View style={styles.infoRow}>
-              <Ionicons
-                name="information-circle"
-                size={20}
-                color={COLORS.muted}
-              />
-              <Text style={styles.infoText}>
-                You've traveled an average of {kpis.avgDistance} km per trip
-              </Text>
-            </View>
-            <View style={styles.infoDivider} />
-            <View style={styles.infoRow}>
-              <Ionicons
-                name="checkmark-circle"
-                size={20}
-                color={COLORS.success}
-              />
-              <Text style={styles.infoText}>
-                Longest trip was {kpis.longestTrip} km
-              </Text>
-            </View>
-            <View style={styles.infoDivider} />
-            <View style={styles.infoRow}>
-              <Ionicons
-                name="speedometer-outline"
-                size={20}
-                color={COLORS.muted}
-              />
-              <Text style={styles.infoText}>
-                Current odometer reading: {kpis.currentOdometer} km
-              </Text>
             </View>
           </View>
         </View>
@@ -492,5 +564,22 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: COLORS.card,
     marginVertical: 12,
+  },
+  centered: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: COLORS.muted,
+  },
+  errorText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: COLORS.danger,
+    textAlign: "center",
   },
 });

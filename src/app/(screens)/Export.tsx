@@ -1,36 +1,54 @@
-import React, { useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Alert,
-} from "react-native";
-import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import COLORS from "../assets/colors";
-import AppButton from "../components/AppButton";
-import { tripData } from "../data/tripdata";
+import { router } from "expo-router";
+import React, { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import COLORS from "../../assets/colors";
+import AppButton from "../../components/AppButton";
+import { Trip } from "../../data/tripdata";
+import {
+  ExportOptions,
+  exportToExcel,
+  exportToPDF,
+  shareExcelFile,
+  sharePDFFile,
+} from "../../functions/exportService";
+import { tripService } from "../../functions/tripService";
 
 const Export = () => {
   const [selectedFormat, setSelectedFormat] = useState<string | null>(null);
+  const [selectedDateRange, setSelectedDateRange] = useState<string | null>(
+    null
+  );
+  const [includePhotos, setIncludePhotos] = useState(false);
+  const [fetchedTrips, setFetchedTrips] = useState<Trip[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
+  const [sharing, setSharing] = useState(false);
+
+  useEffect(() => {
+    const fetchTrips = async () => {
+      setLoading(true);
+      const { data, error } = await tripService.getAllTrips();
+      if (error) {
+        console.error("Error fetching trips:", error);
+        Alert.alert("Error", "Failed to fetch trips");
+      } else {
+        setFetchedTrips(data || []);
+      }
+      setLoading(false);
+    };
+    fetchTrips();
+  }, []);
 
   const exportFormats = [
-    {
-      id: "csv",
-      name: "CSV",
-      description: "Comma-separated values for Excel",
-      icon: "document-text",
-      color: COLORS.success,
-    },
-    {
-      id: "json",
-      name: "JSON",
-      description: "JavaScript Object Notation",
-      icon: "code-slash",
-      color: COLORS.primary,
-    },
     {
       id: "pdf",
       name: "PDF",
@@ -44,54 +62,166 @@ const Export = () => {
       description: "Microsoft Excel format (.xlsx)",
       icon: "grid",
       color: COLORS.accent,
+      disabled: includePhotos, // Disable if photos are included
     },
   ];
 
   const exportOptions = [
     {
-      id: "all",
-      name: "All Trips",
-      description: `Export all ${tripData.length} trips`,
-      icon: "albums",
+      id: "7days",
+      name: "Last 7 Days",
+      description: "Export trips from last 7 days",
+      icon: "calendar",
     },
     {
-      id: "recent",
-      name: "Recent Trips",
+      id: "30days",
+      name: "Last 30 Days",
       description: "Export trips from last 30 days",
       icon: "time",
     },
     {
       id: "custom",
-      name: "Custom Range",
-      description: "Select date range to export",
-      icon: "calendar",
+      name: "Custom Date Range",
+      description: "Select custom date range",
+      icon: "calendar-outline",
     },
   ];
 
-  const handleExport = () => {
+  const handleExport = async () => {
     if (!selectedFormat) {
       Alert.alert("Select Format", "Please select an export format");
       return;
     }
 
-    Alert.alert(
-      "Export Successful",
-      `Your trip data has been exported as ${selectedFormat.toUpperCase()}`,
-      [
-        {
-          text: "OK",
-          onPress: () => {
-            console.log(`Exported as ${selectedFormat}`);
-            // Here you would implement actual export logic
-          },
-        },
-      ]
-    );
+    if (!selectedDateRange) {
+      Alert.alert("Select Date Range", "Please select a date range");
+      return;
+    }
+
+    if (selectedDateRange === "custom") {
+      Alert.alert(
+        "Custom Date Range",
+        "Date picker will be implemented in the next update"
+      );
+      return;
+    }
+
+    setExporting(true);
+
+    try {
+      const exportOptions: ExportOptions = {
+        format: selectedFormat as "excel" | "pdf",
+        dateRange: selectedDateRange as "7days" | "30days" | "custom",
+        includePhotos,
+      };
+
+      let result;
+      if (selectedFormat === "excel") {
+        result = await exportToExcel(fetchedTrips, exportOptions);
+      } else {
+        result = await exportToPDF(fetchedTrips, exportOptions);
+      }
+
+      if (result.success) {
+        Alert.alert("Export Successful", result.message);
+      } else {
+        Alert.alert("Export Failed", result.message);
+      }
+    } catch (error) {
+      console.error("Export error:", error);
+      Alert.alert("Error", "An unexpected error occurred during export");
+    } finally {
+      setExporting(false);
+    }
   };
 
-  const handleShare = () => {
-    Alert.alert("Share", "Share functionality coming soon");
+  const handleShare = async () => {
+    if (!selectedFormat) {
+      Alert.alert("Select Format", "Please select an export format");
+      return;
+    }
+
+    if (!selectedDateRange) {
+      Alert.alert("Select Date Range", "Please select a date range");
+      return;
+    }
+
+    if (selectedDateRange === "custom") {
+      Alert.alert(
+        "Custom Date Range",
+        "Date picker will be implemented in the next update"
+      );
+      return;
+    }
+
+    setSharing(true);
+
+    try {
+      const exportOptions: ExportOptions = {
+        format: selectedFormat as "excel" | "pdf",
+        dateRange: selectedDateRange as "7days" | "30days" | "custom",
+        includePhotos,
+      };
+
+      let result;
+      if (selectedFormat === "excel") {
+        result = await shareExcelFile(fetchedTrips, exportOptions);
+      } else {
+        result = await sharePDFFile(fetchedTrips, exportOptions);
+      }
+
+      if (result.success) {
+        Alert.alert("Share Successful", result.message);
+      } else {
+        Alert.alert("Share Failed", result.message);
+      }
+    } catch (error) {
+      console.error("Share error:", error);
+      Alert.alert("Error", "An unexpected error occurred during share");
+    } finally {
+      setSharing(false);
+    }
   };
+
+  const handleDateRangeSelect = (rangeId: string) => {
+    setSelectedDateRange(rangeId);
+    if (rangeId === "custom") {
+      // TODO: Open date picker modal
+      Alert.alert("Custom Date Range", "Date picker will be implemented soon");
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <Ionicons name="arrow-back" size={24} color="#fff" />
+          </TouchableOpacity>
+          <View style={styles.headerContent}>
+            <Text style={styles.headerTitle}>Export Data</Text>
+            <Text style={styles.headerSubtitle}>
+              Download your trip history
+            </Text>
+          </View>
+        </View>
+        <View
+          style={[
+            styles.container,
+            { justifyContent: "center", alignItems: "center" },
+          ]}
+        >
+          <ActivityIndicator size="large" color={COLORS.primary} />
+          <Text style={{ marginTop: 16, color: COLORS.muted }}>
+            Loading trips...
+          </Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -117,7 +247,7 @@ const Export = () => {
         {/* Stats Overview */}
         <View style={styles.statsCard}>
           <Ionicons name="bar-chart" size={32} color={COLORS.primary} />
-          <Text style={styles.statsValue}>{tripData.length}</Text>
+          <Text style={styles.statsValue}>{fetchedTrips.length}</Text>
           <Text style={styles.statsLabel}>Total Trips Available</Text>
         </View>
 
@@ -131,9 +261,11 @@ const Export = () => {
                 style={[
                   styles.formatCard,
                   selectedFormat === format.id && styles.formatCardSelected,
+                  format.disabled && styles.formatCardDisabled,
                 ]}
-                onPress={() => setSelectedFormat(format.id)}
+                onPress={() => !format.disabled && setSelectedFormat(format.id)}
                 activeOpacity={0.7}
+                disabled={format.disabled}
               >
                 <View
                   style={[
@@ -144,13 +276,30 @@ const Export = () => {
                   <Ionicons
                     name={format.icon as any}
                     size={28}
-                    color={format.color}
+                    color={format.disabled ? COLORS.muted : format.color}
                   />
                 </View>
-                <Text style={styles.formatName}>{format.name}</Text>
-                <Text style={styles.formatDescription}>
+                <Text
+                  style={[
+                    styles.formatName,
+                    format.disabled && styles.formatTextDisabled,
+                  ]}
+                >
+                  {format.name}
+                </Text>
+                <Text
+                  style={[
+                    styles.formatDescription,
+                    format.disabled && styles.formatTextDisabled,
+                  ]}
+                >
                   {format.description}
                 </Text>
+                {format.disabled && (
+                  <Text style={styles.disabledLabel}>
+                    Not available with photos
+                  </Text>
+                )}
                 {selectedFormat === format.id && (
                   <View style={styles.checkmark}>
                     <Ionicons
@@ -167,11 +316,15 @@ const Export = () => {
 
         {/* Export Options Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Export Options</Text>
+          <Text style={styles.sectionTitle}>Date Range</Text>
           {exportOptions.map((option) => (
             <TouchableOpacity
               key={option.id}
-              style={styles.optionCard}
+              style={[
+                styles.optionCard,
+                selectedDateRange === option.id && styles.optionCardSelected,
+              ]}
+              onPress={() => handleDateRangeSelect(option.id)}
               activeOpacity={0.7}
             >
               <View
@@ -192,7 +345,13 @@ const Export = () => {
                   {option.description}
                 </Text>
               </View>
-              <Ionicons name="chevron-forward" size={20} color={COLORS.muted} />
+              {selectedDateRange === option.id && (
+                <Ionicons
+                  name="checkmark-circle"
+                  size={24}
+                  color={COLORS.primary}
+                />
+              )}
             </TouchableOpacity>
           ))}
         </View>
@@ -201,45 +360,26 @@ const Export = () => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Additional Settings</Text>
           <View style={styles.settingsCard}>
-            <View style={styles.settingRow}>
+            <TouchableOpacity
+              style={styles.settingRow}
+              onPress={() => setIncludePhotos(!includePhotos)}
+              activeOpacity={0.7}
+            >
               <Ionicons name="image-outline" size={20} color={COLORS.muted} />
               <Text style={styles.settingText}>Include trip photos</Text>
               <View style={styles.toggle}>
                 <Ionicons
-                  name="checkmark-circle"
+                  name={includePhotos ? "checkmark-circle" : "ellipse-outline"}
                   size={24}
-                  color={COLORS.success}
+                  color={includePhotos ? COLORS.success : COLORS.muted}
                 />
               </View>
-            </View>
-            <View style={styles.settingDivider} />
-            <View style={styles.settingRow}>
-              <Ionicons
-                name="analytics-outline"
-                size={20}
-                color={COLORS.muted}
-              />
-              <Text style={styles.settingText}>Include statistics</Text>
-              <View style={styles.toggle}>
-                <Ionicons
-                  name="checkmark-circle"
-                  size={24}
-                  color={COLORS.success}
-                />
-              </View>
-            </View>
-            <View style={styles.settingDivider} />
-            <View style={styles.settingRow}>
-              <Ionicons name="map-outline" size={20} color={COLORS.muted} />
-              <Text style={styles.settingText}>Include map data</Text>
-              <View style={styles.toggle}>
-                <Ionicons
-                  name="ellipse-outline"
-                  size={24}
-                  color={COLORS.muted}
-                />
-              </View>
-            </View>
+            </TouchableOpacity>
+            {includePhotos && (
+              <Text style={styles.photoWarning}>
+                Note: Excel export is not available when photos are included
+              </Text>
+            )}
           </View>
         </View>
 
@@ -251,16 +391,24 @@ const Export = () => {
             variant="primary"
             shape="rounded"
             style={styles.exportButton}
+            disabled={exporting || sharing}
           >
-            <>
-              <Ionicons
-                name="download"
-                size={20}
-                color="#fff"
-                style={{ marginRight: 8 }}
-              />
-              Export Data
-            </>
+            {exporting ? (
+              <>
+                <ActivityIndicator color="#fff" style={{ marginRight: 8 }} />
+                <Text style={{ color: "#fff" }}>Exporting...</Text>
+              </>
+            ) : (
+              <>
+                <Ionicons
+                  name="download"
+                  size={20}
+                  color="#fff"
+                  style={{ marginRight: 8 }}
+                />
+                Export to Downloads
+              </>
+            )}
           </AppButton>
 
           <AppButton
@@ -269,16 +417,27 @@ const Export = () => {
             variant="outline"
             shape="rounded"
             style={styles.shareButton}
+            disabled={exporting || sharing}
           >
-            <>
-              <Ionicons
-                name="share-social"
-                size={20}
-                color={COLORS.primary}
-                style={{ marginRight: 8 }}
-              />
-              Share
-            </>
+            {sharing ? (
+              <>
+                <ActivityIndicator
+                  color={COLORS.primary}
+                  style={{ marginRight: 8 }}
+                />
+                <Text style={{ color: COLORS.primary }}>Sharing...</Text>
+              </>
+            ) : (
+              <>
+                <Ionicons
+                  name="share-outline"
+                  size={20}
+                  color={COLORS.primary}
+                  style={{ marginRight: 8 }}
+                />
+                Share File
+              </>
+            )}
           </AppButton>
         </View>
 
@@ -290,7 +449,8 @@ const Export = () => {
             color={COLORS.primary}
           />
           <Text style={styles.infoText}>
-            Exported files will be saved to your device's Downloads folder
+            Export saves to app documents. Share opens native share dialog to
+            save anywhere.
           </Text>
         </View>
 
@@ -393,6 +553,19 @@ const styles = StyleSheet.create({
     borderColor: COLORS.primary,
     backgroundColor: COLORS.primary + "05",
   },
+  formatCardDisabled: {
+    opacity: 0.5,
+    backgroundColor: COLORS.card,
+  },
+  formatTextDisabled: {
+    color: COLORS.muted,
+  },
+  disabledLabel: {
+    fontSize: 10,
+    color: COLORS.danger,
+    marginTop: 4,
+    textAlign: "center",
+  },
   formatIcon: {
     width: 56,
     height: 56,
@@ -425,11 +598,17 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
+    borderWidth: 2,
+    borderColor: "transparent",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+  },
+  optionCardSelected: {
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.primary + "05",
   },
   optionIcon: {
     width: 48,
@@ -479,6 +658,12 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: COLORS.card,
     marginVertical: 16,
+  },
+  photoWarning: {
+    fontSize: 12,
+    color: COLORS.warning,
+    marginTop: 12,
+    fontStyle: "italic",
   },
   actionButtons: {
     gap: 12,

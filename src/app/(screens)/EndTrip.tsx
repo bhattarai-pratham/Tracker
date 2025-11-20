@@ -1,31 +1,35 @@
+import { router } from "expo-router";
+import { useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
+  Keyboard,
+  KeyboardAvoidingView,
   StyleSheet,
   Text,
-  View,
   TextInput,
-  Alert,
-  KeyboardAvoidingView,
-  Keyboard,
+  View,
 } from "react-native";
-import AppButton from "../components/AppButton";
-import { useTripContext } from "../context/TripContext";
-import { router } from "expo-router";
-import COLORS from "../assets/colors";
+import COLORS from "../../assets/colors";
+import AppButton from "../../components/AppButton";
+import { useTripContext } from "../../context/TripContext";
+import { tripService } from "../../functions/tripService";
 
 const EndTrip = () => {
   const {
     setIsTripActive,
     is_trip_active,
-    setStartingOdometer,
     tripId,
-    setTripId,
+    startingOdometer,
     endingOdometer,
     setEndingOdometer,
     setEndTimestamp,
-    setStartTimestamp,
+    clearStorage,
   } = useTripContext();
 
-  const handleTripStatusChange = () => {
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleTripStatusChange = async () => {
     if (!endingOdometer || isNaN(Number(endingOdometer))) {
       Alert.alert("Invalid Input", "Please enter a valid odometer reading");
       return;
@@ -36,60 +40,80 @@ const EndTrip = () => {
       return;
     }
 
-    const newEndTimestamp = new Date();
+    if (!tripId) {
+      Alert.alert("Error", "Trip ID is missing. Please start a new trip.");
+      return;
+    }
 
-    setEndingOdometer(endingOdometer);
-    setEndTimestamp(newEndTimestamp);
+    // Validate ending odometer is greater than starting
+    if (
+      startingOdometer &&
+      Number(endingOdometer) <= Number(startingOdometer)
+    ) {
+      Alert.alert(
+        "Invalid Input",
+        "Ending odometer must be greater than starting odometer"
+      );
+      return;
+    }
 
-    Alert.alert(
-      "Trip Ended",
-      `Trip ID: ${tripId}\nEnding Odometer: ${endingOdometer}\nEnd Time: ${newEndTimestamp.toLocaleString(
-        "en-US",
-        {
-          year: "numeric",
-          month: "2-digit",
-          day: "2-digit",
-          hour: "2-digit",
-          minute: "2-digit",
-        }
-      )}`,
-      [
-        {
-          text: "OK",
-          onPress: () => {
-            {
-              console.log(
-                "Trip ended - ID:",
-                tripId,
-                "Ending Odometer:",
-                endingOdometer,
-                "End Time:",
-                newEndTimestamp.toLocaleString("en-US", {
-                  year: "numeric",
-                  month: "2-digit",
-                  day: "2-digit",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })
-              );
-              setIsTripActive(false);
-              resetAllValues();
+    setIsLoading(true);
+
+    try {
+      const newEndTimestamp = new Date();
+
+      // Update trip in Supabase
+      const { data, error } = await tripService.updateTripEnd(tripId, {
+        ending_odometer: endingOdometer,
+        end_timestamp: newEndTimestamp.toISOString(),
+      });
+
+      if (error) {
+        console.error("Error updating trip:", error);
+        Alert.alert(
+          "Error",
+          "Failed to end trip. Please check your connection and try again."
+        );
+        setIsLoading(false);
+        return;
+      }
+
+      // Update context state
+      setEndingOdometer(endingOdometer);
+      setEndTimestamp(newEndTimestamp);
+
+      // Clear storage and reset state
+      await clearStorage();
+
+      setIsLoading(false);
+
+      Alert.alert(
+        "Trip Ended",
+        `Trip ID: ${tripId}\nEnding Odometer: ${endingOdometer}\nEnd Time: ${newEndTimestamp.toLocaleString(
+          "en-US",
+          {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+          }
+        )}`,
+        [
+          {
+            text: "OK",
+            onPress: () => {
+              console.log("Trip ended successfully:", data);
               router.back();
-            }
+            },
           },
-        },
-      ]
-    );
-  };
-
-  const resetAllValues = () => {
-    setTripId(undefined);
-    setStartingOdometer(undefined);
-    setEndingOdometer(undefined);
-    setIsTripActive(false);
-    setEndTimestamp(null);
-    setStartTimestamp(null);
-    console.log("Trip data reset.");
+        ]
+      );
+    } catch (err) {
+      console.error("Unexpected error:", err);
+      Alert.alert("Error", "An unexpected error occurred. Please try again.");
+      setIsLoading(false);
+    }
   };
 
   const handleTakePicture = () => {
@@ -138,8 +162,9 @@ const EndTrip = () => {
             variant="danger"
             shape="rounded"
             style={styles.endButton}
+            disabled={isLoading}
           >
-            End Trip
+            {isLoading ? <ActivityIndicator color="#fff" /> : "End Trip"}
           </AppButton>
         </View>
       </View>
