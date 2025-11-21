@@ -53,6 +53,7 @@ export const tripService = {
     endData: {
       ending_odometer: string;
       end_timestamp: string;
+      earnings?: number;
     }
   ): Promise<{ data: Trip | null; error: any }> {
     console.log("Updating trip end:", { tripId, endData });
@@ -61,6 +62,7 @@ export const tripService = {
       .update({
         ending_odometer: endData.ending_odometer,
         end_timestamp: endData.end_timestamp,
+        earnings: endData.earnings,
       })
       .eq("id", tripId)
       .select()

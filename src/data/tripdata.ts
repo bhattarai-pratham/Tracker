@@ -4,5 +4,6 @@ export interface Trip {
   start_timestamp: string;
   ending_odometer: string;
   end_timestamp: string;
+  earnings?: number;
   created_at?: string;
 }

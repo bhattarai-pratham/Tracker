@@ -22,6 +22,7 @@ export interface FormattedTrip {
   endingOdometer: string;
   distance: string;
   duration: string;
+  earnings: string;
 }
 
 export interface ExportSummary {
@@ -32,6 +33,8 @@ export interface ExportSummary {
   avgDistance: string;
   totalDuration: string;
   avgDuration: string;
+  totalEarnings: string;
+  avgEarnings: string;
 }
 
 // Filter trips by date range
@@ -110,6 +113,7 @@ export const formatTripDataForExport = (trips: Trip[]): FormattedTrip[] => {
       endingOdometer: trip.ending_odometer,
       distance: `${distance} km`,
       duration: calculateDuration(trip.start_timestamp, trip.end_timestamp),
+      earnings: trip.earnings ? `$${trip.earnings.toFixed(2)}` : "No data",
     };
   });
 };
@@ -146,6 +150,12 @@ export const calculateSummary = (
     (avgDurationMs % (1000 * 60 * 60)) / (1000 * 60)
   );
 
+  const totalEarnings = trips.reduce((sum, trip) => {
+    return sum + (trip.earnings || 0);
+  }, 0);
+
+  const avgEarnings = totalTrips > 0 ? totalEarnings / totalTrips : 0;
+
   let dateRangeLabel = "";
   switch (options.dateRange) {
     case "7days":
@@ -173,6 +183,8 @@ export const calculateSummary = (
     avgDistance: `${avgDistance.toFixed(1)} km`,
     totalDuration: `${totalHours}h ${totalMinutes}m`,
     avgDuration: `${avgHours}h ${avgMinutes}m`,
+    totalEarnings: `$${totalEarnings.toFixed(2)}`,
+    avgEarnings: `$${avgEarnings.toFixed(2)}`,
   };
 };
 
@@ -220,6 +232,7 @@ export const exportToExcel = async (
       "Ending Odometer": trip.endingOdometer,
       Distance: trip.distance,
       Duration: trip.duration,
+      "Earnings (AUD)": trip.earnings,
     }));
 
     const wsTrips = XLSX.utils.json_to_sheet(tripData);
@@ -237,6 +250,8 @@ export const exportToExcel = async (
       ["Average Distance", summary.avgDistance],
       ["Total Duration", summary.totalDuration],
       ["Average Duration", summary.avgDuration],
+      ["Total Earnings", summary.totalEarnings],
+      ["Average Earnings", summary.avgEarnings],
     ];
 
     const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
@@ -297,6 +312,7 @@ export const shareExcelFile = async (
       "Ending Odometer": trip.endingOdometer,
       Distance: trip.distance,
       Duration: trip.duration,
+      "Earnings (AUD)": trip.earnings,
     }));
 
     const wsTrips = XLSX.utils.json_to_sheet(tripData);
@@ -314,6 +330,8 @@ export const shareExcelFile = async (
       ["Average Distance", summary.avgDistance],
       ["Total Duration", summary.totalDuration],
       ["Average Duration", summary.avgDuration],
+      ["Total Earnings", summary.totalEarnings],
+      ["Average Earnings", summary.avgEarnings],
     ];
 
     const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
@@ -477,6 +495,14 @@ export const exportToPDF = async (
                 <span class="summary-label">Total Duration:</span>
                 <span class="summary-value">${summary.totalDuration}</span>
               </div>
+              <div class="summary-item">
+                <span class="summary-label">Total Earnings:</span>
+                <span class="summary-value">${summary.totalEarnings}</span>
+              </div>
+              <div class="summary-item">
+                <span class="summary-label">Average Earnings:</span>
+                <span class="summary-value">${summary.avgEarnings}</span>
+              </div>
             </div>
           </div>
 
@@ -491,6 +517,7 @@ export const exportToPDF = async (
                 <th>End Odo</th>
                 <th>Distance</th>
                 <th>Duration</th>
+                <th>Earnings</th>
               </tr>
             </thead>
             <tbody>
@@ -505,6 +532,7 @@ export const exportToPDF = async (
                   <td>${trip.endingOdometer}</td>
                   <td>${trip.distance}</td>
                   <td>${trip.duration}</td>
+                  <td>${trip.earnings}</td>
                 </tr>
               `
                 )
@@ -678,6 +706,14 @@ export const sharePDFFile = async (
                 <span class="summary-label">Total Duration:</span>
                 <span class="summary-value">${summary.totalDuration}</span>
               </div>
+              <div class="summary-item">
+                <span class="summary-label">Total Earnings:</span>
+                <span class="summary-value">${summary.totalEarnings}</span>
+              </div>
+              <div class="summary-item">
+                <span class="summary-label">Average Earnings:</span>
+                <span class="summary-value">${summary.avgEarnings}</span>
+              </div>
             </div>
           </div>
 
@@ -692,6 +728,7 @@ export const sharePDFFile = async (
                 <th>End Odo</th>
                 <th>Distance</th>
                 <th>Duration</th>
+                <th>Earnings</th>
               </tr>
             </thead>
             <tbody>
@@ -706,6 +743,7 @@ export const sharePDFFile = async (
                   <td>${trip.endingOdometer}</td>
                   <td>${trip.distance}</td>
                   <td>${trip.duration}</td>
+                  <td>${trip.earnings}</td>
                 </tr>
               `
                 )

@@ -67,6 +67,13 @@ export default function Dashboard() {
         thisMonthTrips: 0,
         currentOdometer: "0",
         avgSpeed: "0.0",
+        totalEarnings: "0.00",
+        avgEarningsPerTrip: "0.00",
+        earningsPerHour: "0.00",
+        earningsPerKm: "0.00",
+        todayEarnings: "0.00",
+        weekEarnings: "0.00",
+        monthEarnings: "0.00",
       };
     }
 
@@ -133,6 +140,42 @@ export default function Dashboard() {
     // Average speed (distance/duration)
     const avgSpeed = totalDistance / totalDurationHours;
 
+    // Earnings calculations
+    const totalEarnings = trips.reduce((sum, trip) => {
+      return sum + (trip.earnings || 0);
+    }, 0);
+
+    const avgEarningsPerTrip = totalEarnings / totalTrips;
+    const earningsPerHour = totalEarnings / totalDurationHours;
+    const earningsPerKm = totalEarnings / totalDistance;
+
+    // Today's earnings
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayEarnings = trips
+      .filter((trip) => {
+        const tripDate = new Date(trip.start_timestamp);
+        tripDate.setHours(0, 0, 0, 0);
+        return tripDate.getTime() === today.getTime();
+      })
+      .reduce((sum, trip) => sum + (trip.earnings || 0), 0);
+
+    // This week's earnings
+    const weekEarnings = trips
+      .filter((trip) => {
+        const tripDate = new Date(trip.start_timestamp);
+        return tripDate >= weekAgo && tripDate <= now;
+      })
+      .reduce((sum, trip) => sum + (trip.earnings || 0), 0);
+
+    // This month's earnings
+    const monthEarnings = trips
+      .filter((trip) => {
+        const tripDate = new Date(trip.start_timestamp);
+        return tripDate >= monthAgo && tripDate <= now;
+      })
+      .reduce((sum, trip) => sum + (trip.earnings || 0), 0);
+
     return {
       totalTrips,
       totalDistance: totalDistance.toFixed(1),
@@ -145,6 +188,13 @@ export default function Dashboard() {
       thisMonthTrips,
       currentOdometer,
       avgSpeed: avgSpeed.toFixed(1),
+      totalEarnings: totalEarnings.toFixed(2),
+      avgEarningsPerTrip: avgEarningsPerTrip.toFixed(2),
+      earningsPerHour: earningsPerHour.toFixed(2),
+      earningsPerKm: earningsPerKm.toFixed(2),
+      todayEarnings: todayEarnings.toFixed(2),
+      weekEarnings: weekEarnings.toFixed(2),
+      monthEarnings: monthEarnings.toFixed(2),
     };
   };
 
@@ -320,6 +370,109 @@ export default function Dashboard() {
               <Ionicons name="timer" size={28} color={COLORS.accent} />
               <Text style={styles.timeValue}>{kpis.avgDurationHours}h</Text>
               <Text style={styles.timeLabel}>Avg Duration</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Earnings Stats */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Earnings Analytics</Text>
+          <View style={styles.statsGrid}>
+            <View style={styles.statCard}>
+              <View
+                style={[
+                  styles.iconCircle,
+                  { backgroundColor: COLORS.success + "20" },
+                ]}
+              >
+                <Ionicons name="cash" size={24} color={COLORS.success} />
+              </View>
+              <Text style={styles.statValue}>${kpis.totalEarnings}</Text>
+              <Text style={styles.statLabel}>Total Earnings</Text>
+            </View>
+
+            <View style={styles.statCard}>
+              <View
+                style={[
+                  styles.iconCircle,
+                  { backgroundColor: COLORS.primary + "20" },
+                ]}
+              >
+                <Ionicons name="wallet" size={24} color={COLORS.primary} />
+              </View>
+              <Text style={styles.statValue}>${kpis.avgEarningsPerTrip}</Text>
+              <Text style={styles.statLabel}>Avg Per Trip</Text>
+            </View>
+
+            <View style={styles.statCard}>
+              <View
+                style={[
+                  styles.iconCircle,
+                  { backgroundColor: COLORS.accent + "20" },
+                ]}
+              >
+                <Ionicons name="time" size={24} color={COLORS.accent} />
+              </View>
+              <Text style={styles.statValue}>${kpis.earningsPerHour}</Text>
+              <Text style={styles.statLabel}>Per Hour</Text>
+            </View>
+
+            <View style={styles.statCard}>
+              <View
+                style={[
+                  styles.iconCircle,
+                  { backgroundColor: COLORS.warning + "20" },
+                ]}
+              >
+                <Ionicons name="navigate" size={24} color={COLORS.warning} />
+              </View>
+              <Text style={styles.statValue}>${kpis.earningsPerKm}</Text>
+              <Text style={styles.statLabel}>Per Km</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Earnings by Period */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Earnings by Period</Text>
+          <View style={styles.activityRow}>
+            <View style={styles.activityCard}>
+              <View
+                style={[
+                  styles.activityIcon,
+                  { backgroundColor: COLORS.success },
+                ]}
+              >
+                <Ionicons name="today" size={20} color="#fff" />
+              </View>
+              <Text style={styles.activityValue}>${kpis.todayEarnings}</Text>
+              <Text style={styles.activityLabel}>Today</Text>
+            </View>
+
+            <View style={styles.activityCard}>
+              <View
+                style={[
+                  styles.activityIcon,
+                  { backgroundColor: COLORS.primary },
+                ]}
+              >
+                <Ionicons name="calendar" size={20} color="#fff" />
+              </View>
+              <Text style={styles.activityValue}>${kpis.weekEarnings}</Text>
+              <Text style={styles.activityLabel}>This Week</Text>
+            </View>
+
+            <View style={styles.activityCard}>
+              <View
+                style={[
+                  styles.activityIcon,
+                  { backgroundColor: COLORS.accent },
+                ]}
+              >
+                <Ionicons name="calendar-outline" size={20} color="#fff" />
+              </View>
+              <Text style={styles.activityValue}>${kpis.monthEarnings}</Text>
+              <Text style={styles.activityLabel}>This Month</Text>
             </View>
           </View>
         </View>
@@ -530,7 +683,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   activityValue: {
-    fontSize: 28,
+    fontSize: 25,
     fontWeight: "bold",
     color: COLORS.text,
     marginBottom: 4,

@@ -33,10 +33,6 @@
       "image": "./src/assets/images/logo.png",
       "backgroundColor": "#ffffff",
       "resizeMode": "contain"
-    },
-    "extra": {
-      "supabaseUrl": process.env.SUPABASE_URL,
-      "supabaseKey": process.env.SUPABASE_KEY
     }
   }
 }

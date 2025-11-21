@@ -176,6 +176,19 @@ const TripDetail = () => {
           </Text>
         </View>
 
+        {/* Earnings Card */}
+        <View
+          style={[styles.mainCard, { backgroundColor: COLORS.success + "20" }]}
+        >
+          <View style={styles.mainCardIcon}>
+            <Ionicons name="cash" size={32} color={COLORS.success} />
+          </View>
+          <Text style={styles.mainCardLabel}>Earnings</Text>
+          <Text style={styles.mainCardValue}>
+            {trip.earnings ? `$${trip.earnings.toFixed(2)}` : "No data"}
+          </Text>
+        </View>
+
         {/* Odometer Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Odometer Readings</Text>

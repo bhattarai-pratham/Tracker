@@ -41,3 +41,32 @@ CREATE TABLE trips (
 2. Create `.env` file with Supabase credentials
 3. Run SQL from `.env.example` in Supabase
 4. `npx expo start`
+
+## Project Structure
+
+```
+src/
+├── app/
+│   ├── (tabs)/          # Tab navigation screens
+│   │   ├── index.tsx    # Dashboard
+│   │   ├── Trips.tsx    # Trip history
+│   │   └── More.tsx     # Settings/More
+│   ├── (screens)/       # Modal screens
+│   │   ├── StartTrip.tsx
+│   │   ├── EndTrip.tsx
+│   │   └── Export.tsx
+│   └── _layout.tsx      # Root layout
+├── components/          # Reusable UI components
+│   ├── AppButton.tsx
+│   ├── TripCard.tsx
+│   └── Helpers.tsx
+├── context/
+│   └── TripContext.tsx  # Global state management
+├── functions/
+│   ├── supabase.ts      # Database client
+│   ├── tripService.ts   # Trip CRUD operations
+│   └── exportService.ts # Excel/PDF export logic
+└── data/
+    ├── tripdata.ts      # TypeScript interfaces
+    └── colors.ts        # Design tokens
+```

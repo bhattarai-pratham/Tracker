@@ -24,6 +24,8 @@ const EndTrip = () => {
     endingOdometer,
     setEndingOdometer,
     setEndTimestamp,
+    earnings,
+    setEarnings,
     clearStorage,
   } = useTripContext();
 
@@ -66,6 +68,7 @@ const EndTrip = () => {
       const { data, error } = await tripService.updateTripEnd(tripId, {
         ending_odometer: endingOdometer,
         end_timestamp: newEndTimestamp.toISOString(),
+        earnings: earnings ? parseFloat(earnings) : undefined,
       });
 
       if (error) {
@@ -139,6 +142,15 @@ const EndTrip = () => {
             keyboardType="numeric"
             value={endingOdometer}
             onChangeText={setEndingOdometer}
+          />
+
+          <Text style={styles.label}>Earnings (AUD)</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter earnings (e.g., 125.50)"
+            keyboardType="decimal-pad"
+            value={earnings}
+            onChangeText={setEarnings}
           />
 
           <Text style={styles.label}>Timestamp</Text>

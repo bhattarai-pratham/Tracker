@@ -27,6 +27,9 @@ interface TripContextType {
   endTimestamp: Date | null;
   setEndTimestamp: (timestamp: Date | null) => void;
 
+  earnings: string | undefined;
+  setEarnings: (earnings: string | undefined) => void;
+
   // Storage functions
   saveToStorage: () => Promise<void>;
   clearStorage: () => Promise<void>;
@@ -40,6 +43,7 @@ const STORAGE_KEYS = {
   IS_TRIP_ACTIVE: "@trip_is_active",
   STARTING_ODOMETER: "@trip_starting_odometer",
   START_TIMESTAMP: "@trip_start_timestamp",
+  EARNINGS: "@trip_earnings",
 };
 
 export function TripProvider({ children }: { children: ReactNode }) {
@@ -53,6 +57,7 @@ export function TripProvider({ children }: { children: ReactNode }) {
     undefined
   );
   const [endTimestamp, setEndTimestamp] = useState<Date | null>(null);
+  const [earnings, setEarnings] = useState<string | undefined>(undefined);
 
   // Initialize from storage on app launch
   useEffect(() => {
@@ -62,13 +67,19 @@ export function TripProvider({ children }: { children: ReactNode }) {
   const initializeFromStorage = async () => {
     try {
       console.log("Initializing trip state from storage...");
-      const [storedTripId, storedIsActive, storedOdometer, storedTimestamp] =
-        await Promise.all([
-          AsyncStorage.getItem(STORAGE_KEYS.ACTIVE_TRIP_ID),
-          AsyncStorage.getItem(STORAGE_KEYS.IS_TRIP_ACTIVE),
-          AsyncStorage.getItem(STORAGE_KEYS.STARTING_ODOMETER),
-          AsyncStorage.getItem(STORAGE_KEYS.START_TIMESTAMP),
-        ]);
+      const [
+        storedTripId,
+        storedIsActive,
+        storedOdometer,
+        storedTimestamp,
+        storedEarnings,
+      ] = await Promise.all([
+        AsyncStorage.getItem(STORAGE_KEYS.ACTIVE_TRIP_ID),
+        AsyncStorage.getItem(STORAGE_KEYS.IS_TRIP_ACTIVE),
+        AsyncStorage.getItem(STORAGE_KEYS.STARTING_ODOMETER),
+        AsyncStorage.getItem(STORAGE_KEYS.START_TIMESTAMP),
+        AsyncStorage.getItem(STORAGE_KEYS.EARNINGS),
+      ]);
 
       if (storedTripId && storedIsActive === "true") {
         // Verify with Supabase that trip still exists and is incomplete
@@ -85,6 +96,7 @@ export function TripProvider({ children }: { children: ReactNode }) {
           setIsTripActive(true);
           setStartingOdometer(storedOdometer || undefined);
           setStartTimestamp(storedTimestamp ? new Date(storedTimestamp) : null);
+          setEarnings(storedEarnings || undefined);
         } else {
           // Trip completed or doesn't exist, clear storage
           console.log("Trip completed or invalid, clearing storage");
@@ -115,6 +127,7 @@ export function TripProvider({ children }: { children: ReactNode }) {
           STORAGE_KEYS.START_TIMESTAMP,
           startTimestamp?.toISOString() || ""
         ),
+        AsyncStorage.setItem(STORAGE_KEYS.EARNINGS, earnings || ""),
       ]);
       console.log("Trip state saved successfully");
     } catch (error) {
@@ -130,6 +143,7 @@ export function TripProvider({ children }: { children: ReactNode }) {
         AsyncStorage.removeItem(STORAGE_KEYS.IS_TRIP_ACTIVE),
         AsyncStorage.removeItem(STORAGE_KEYS.STARTING_ODOMETER),
         AsyncStorage.removeItem(STORAGE_KEYS.START_TIMESTAMP),
+        AsyncStorage.removeItem(STORAGE_KEYS.EARNINGS),
       ]);
       setIsTripActive(false);
       setTripId(undefined);
@@ -137,6 +151,7 @@ export function TripProvider({ children }: { children: ReactNode }) {
       setStartTimestamp(null);
       setEndingOdometer(undefined);
       setEndTimestamp(null);
+      setEarnings(undefined);
       console.log("Trip state cleared successfully");
     } catch (error) {
       console.error("Error clearing storage:", error);
@@ -158,6 +173,8 @@ export function TripProvider({ children }: { children: ReactNode }) {
         setEndingOdometer,
         endTimestamp,
         setEndTimestamp,
+        earnings,
+        setEarnings,
         saveToStorage,
         clearStorage,
         initializeFromStorage,
