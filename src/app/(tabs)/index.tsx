@@ -435,7 +435,7 @@ export default function Dashboard() {
         {/* Earnings by Period */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Earnings by Period</Text>
-          <View style={styles.activityRow}>
+          <View style={styles.earningsColumn}>
             <View style={styles.activityCard}>
               <View
                 style={[
@@ -660,6 +660,10 @@ const styles = StyleSheet.create({
   },
   activityRow: {
     flexDirection: "row",
+    gap: 12,
+  },
+  earningsColumn: {
+    flexDirection: "column",
     gap: 12,
   },
   activityCard: {
