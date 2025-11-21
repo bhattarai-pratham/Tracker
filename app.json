@@ -16,11 +16,13 @@
       "predictiveBackGestureEnabled": false,
       "package": "com.anonymous.trackerv2",
       "adaptiveIcon": {
+        "foregroundImage": "./src/assets/images/logo.png",
         "backgroundColor": "#ffffff"
       }
     },
     "web": {
-      "output": "static"
+      "output": "static",
+      "favicon": "./src/assets/images/logo.png"
     },
     "plugins": ["expo-router"],
     "experiments": {
@@ -28,6 +30,7 @@
       "reactCompiler": true
     },
     "splash": {
+      "image": "./src/assets/images/logo.png",
       "backgroundColor": "#ffffff",
       "resizeMode": "contain"
     }
