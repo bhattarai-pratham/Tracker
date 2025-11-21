@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "tracker-v2",
+    "name": "Tracker",
     "slug": "tracker-v2",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "scheme": "trackerv2",
     "userInterfaceStyle": "automatic",
@@ -33,6 +33,10 @@
       "image": "./src/assets/images/logo.png",
       "backgroundColor": "#ffffff",
       "resizeMode": "contain"
+    },
+    "extra": {
+      "supabaseUrl": process.env.SUPABASE_URL,
+      "supabaseKey": process.env.SUPABASE_KEY
     }
   }
 }

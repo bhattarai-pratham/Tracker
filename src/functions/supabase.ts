@@ -1,9 +1,14 @@
 import { createClient } from "@supabase/supabase-js";
+import Constants from "expo-constants";
 
-const SUPABASE_URL = "https://rlsntcjovsetoejjcmzw.supabase.co";
-// TODO: Replace this with your actual anon/public key from Supabase dashboard
-// It should start with "eyJ..." and be very long
-const SUPABASE_ANON_KEY = "sb_publishable_4rSd2pce5Lvbvi10qUMHtQ_gh7cXNHk";
+const SUPABASE_URL = Constants.expoConfig?.extra?.supabaseUrl || "";
+const SUPABASE_ANON_KEY = Constants.expoConfig?.extra?.supabaseKey || "";
+
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  throw new Error(
+    "Missing Supabase credentials. Please check your .env file and app.json configuration."
+  );
+}
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 export { SUPABASE_URL };
