@@ -2,6 +2,10 @@
 
 A React Native mobile app for tracking vehicle trips with odometer readings.
 
+## Why I Built This
+
+I created this app to accurately track my time spent driving for Uber. While Uber provides a timeline of when I'm online, it doesn't account for offline work time - like driving from low-demand areas to high-demand zones. This app helps me record my actual working hours, which is essential for accurate tax reporting and maximizing deductions with my tax agent.
+
 ## Tech Stack
 
 - React Native + Expo
@@ -17,6 +21,19 @@ A React Native mobile app for tracking vehicle trips with odometer readings.
 - Trip history
 - Export to Excel/PDF
 - Offline support
+
+## Database Structure
+
+```sql
+CREATE TABLE trips (
+  id TEXT PRIMARY KEY,
+  starting_odometer TEXT NOT NULL,
+  ending_odometer TEXT,
+  start_timestamp TIMESTAMPTZ NOT NULL,
+  end_timestamp TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
 
 ## Setup
 
