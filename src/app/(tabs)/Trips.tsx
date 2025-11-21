@@ -95,10 +95,18 @@ const Trips = () => {
             {formatDate(item.start_timestamp)}
           </Text>
         </View>
-        <View style={styles.distanceBadge}>
-          <Text style={styles.distanceText}>
-            {calculateDistance(item.starting_odometer, item.ending_odometer)} km
-          </Text>
+        <View style={styles.badgeRow}>
+          <View style={styles.earningsBadge}>
+            <Text style={styles.earningsText}>
+              ${item.earnings ? item.earnings.toFixed(2) : "0.00"}
+            </Text>
+          </View>
+          <View style={styles.distanceBadge}>
+            <Text style={styles.distanceText}>
+              {calculateDistance(item.starting_odometer, item.ending_odometer)}{" "}
+              km
+            </Text>
+          </View>
         </View>
       </View>
 
@@ -257,6 +265,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: COLORS.text,
+  },
+  badgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  earningsBadge: {
+    backgroundColor: COLORS.success,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  earningsText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#fff",
   },
   distanceBadge: {
     backgroundColor: COLORS.primary,

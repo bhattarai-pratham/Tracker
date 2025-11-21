@@ -8,11 +8,14 @@ const RootLayoutContent = () => {
   const { is_trip_active } = useTripContext();
   const pathname = usePathname();
 
-  // Hide button on StartTrip and EndTrip screens
+  // Hide button on StartTrip, EndTrip, Export, and trip detail screens
   const shouldHideButton =
     pathname.includes("StartTrip") ||
     pathname.includes("EndTrip") ||
-    pathname.includes("Export");
+    pathname.includes("Export") ||
+    (pathname.match(/\/[^/]+$/) &&
+      pathname !== "/" &&
+      !pathname.includes("(tabs)"));
   return (
     <>
       <Stack screenOptions={{ headerShown: false }}>
