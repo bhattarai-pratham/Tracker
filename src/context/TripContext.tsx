@@ -30,6 +30,8 @@ interface TripContextType {
   earnings: string | undefined;
   setEarnings: (earnings: string | undefined) => void;
 
+  isSaving: boolean;
+
   // Storage functions
   saveToStorage: () => Promise<void>;
   clearStorage: () => Promise<void>;
@@ -58,11 +60,39 @@ export function TripProvider({ children }: { children: ReactNode }) {
   );
   const [endTimestamp, setEndTimestamp] = useState<Date | null>(null);
   const [earnings, setEarnings] = useState<string | undefined>(undefined);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Initialize from storage on app launch
   useEffect(() => {
     initializeFromStorage();
   }, []);
+
+  // Auto-save to storage when trip state changes
+  useEffect(() => {
+    console.log("Auto-save effect triggered:", {
+      isInitialized,
+      is_trip_active,
+      tripId,
+      hasAllConditions: isInitialized && is_trip_active && tripId,
+    });
+
+    if (isInitialized && is_trip_active && tripId) {
+      console.log("Auto-saving trip state to storage...");
+      setIsSaving(true);
+      saveToStorage().finally(() => {
+        console.log("Auto-save completed, setting isSaving to false");
+        setIsSaving(false);
+      });
+    }
+  }, [
+    is_trip_active,
+    tripId,
+    startingOdometer,
+    startTimestamp,
+    earnings,
+    isInitialized,
+  ]);
 
   const initializeFromStorage = async () => {
     try {
@@ -83,12 +113,33 @@ export function TripProvider({ children }: { children: ReactNode }) {
 
       if (storedTripId && storedIsActive === "true") {
         // Verify with Supabase that trip still exists and is incomplete
+        console.log("Verifying stored trip with Supabase:", storedTripId);
         const { data, error } = await tripService.getTripByID(storedTripId);
 
-        if (
-          !error &&
+        console.log("Supabase verification result:", {
+          found: !!data,
+          error: error?.message,
+          hasEndTimestamp: data?.end_timestamp,
+          hasEndingOdometer: data?.ending_odometer,
+          endTimestampValue: data?.end_timestamp,
+          endingOdometerValue: data?.ending_odometer,
+        });
+
+        // If there's a network error, trust AsyncStorage and restore anyway
+        if (error) {
+          console.log(
+            "Network error during verification, trusting AsyncStorage"
+          );
+          setTripId(storedTripId);
+          setIsTripActive(true);
+          setStartingOdometer(storedOdometer || undefined);
+          setStartTimestamp(storedTimestamp ? new Date(storedTimestamp) : null);
+          setEarnings(storedEarnings || undefined);
+        } else if (
           data &&
-          (!data.end_timestamp || data.end_timestamp === "")
+          (data.end_timestamp === null ||
+            data.end_timestamp === "" ||
+            data.end_timestamp === undefined)
         ) {
           // Trip is valid and incomplete, restore state
           console.log("Restoring active trip:", storedTripId);
@@ -98,21 +149,33 @@ export function TripProvider({ children }: { children: ReactNode }) {
           setStartTimestamp(storedTimestamp ? new Date(storedTimestamp) : null);
           setEarnings(storedEarnings || undefined);
         } else {
-          // Trip completed or doesn't exist, clear storage
-          console.log("Trip completed or invalid, clearing storage");
+          // Trip completed or doesn't exist in DB, clear storage
+          console.log("Trip completed or not found in DB, clearing storage", {
+            hasData: !!data,
+            endTimestamp: data?.end_timestamp,
+          });
           await clearStorage();
         }
       } else {
         console.log("No active trip found in storage");
       }
+
+      setIsInitialized(true);
     } catch (error) {
       console.error("Error initializing from storage:", error);
+      setIsInitialized(true);
     }
   };
 
   const saveToStorage = async () => {
     try {
-      console.log("Saving trip state to storage...");
+      console.log("Saving trip state to storage...", {
+        tripId,
+        is_trip_active,
+        startingOdometer,
+        startTimestamp: startTimestamp?.toISOString(),
+        earnings,
+      });
       await Promise.all([
         AsyncStorage.setItem(STORAGE_KEYS.ACTIVE_TRIP_ID, tripId || ""),
         AsyncStorage.setItem(
@@ -132,6 +195,7 @@ export function TripProvider({ children }: { children: ReactNode }) {
       console.log("Trip state saved successfully");
     } catch (error) {
       console.error("Error saving to storage:", error);
+      throw error;
     }
   };
 
@@ -175,6 +239,7 @@ export function TripProvider({ children }: { children: ReactNode }) {
         setEndTimestamp,
         earnings,
         setEarnings,
+        isSaving,
         saveToStorage,
         clearStorage,
         initializeFromStorage,

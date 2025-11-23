@@ -49,12 +49,14 @@ const Trips = () => {
     fetchTrips();
   };
 
-  const calculateDistance = (start: string, end: string) => {
+  const calculateDistance = (start: string, end: string | null) => {
+    if (!end) return "In Progress";
     const distance = Number(end) - Number(start);
     return distance.toFixed(1);
   };
 
-  const calculateDuration = (start: string, end: string) => {
+  const calculateDuration = (start: string, end: string | null) => {
+    if (!end) return "In Progress";
     const startDate = new Date(start);
     const endDate = new Date(end);
     const durationMs = endDate.getTime() - startDate.getTime();
@@ -103,8 +105,12 @@ const Trips = () => {
           </View>
           <View style={styles.distanceBadge}>
             <Text style={styles.distanceText}>
-              {calculateDistance(item.starting_odometer, item.ending_odometer)}{" "}
-              km
+              {item.ending_odometer
+                ? `${calculateDistance(
+                    item.starting_odometer,
+                    item.ending_odometer
+                  )} km`
+                : "Active"}
             </Text>
           </View>
         </View>
@@ -122,7 +128,9 @@ const Trips = () => {
         <View style={styles.infoItem}>
           <Ionicons name="speedometer" size={16} color={COLORS.muted} />
           <Text style={styles.infoLabel}>End</Text>
-          <Text style={styles.infoValue}>{item.ending_odometer}</Text>
+          <Text style={styles.infoValue}>
+            {item.ending_odometer || "In Progress"}
+          </Text>
         </View>
         <View style={styles.verticalDivider} />
         <View style={styles.infoItem}>
@@ -138,7 +146,8 @@ const Trips = () => {
 
       <View style={styles.dateRow}>
         <Text style={styles.dateText}>
-          {formatTime(item.start_timestamp)} - {formatTime(item.end_timestamp)}
+          {formatTime(item.start_timestamp)} -{" "}
+          {item.end_timestamp ? formatTime(item.end_timestamp) : "In Progress"}
         </Text>
       </View>
     </TouchableOpacity>

@@ -54,7 +54,12 @@ export default function Dashboard() {
 
   // Calculate KPIs
   const calculateKPIs = () => {
-    if (trips.length === 0) {
+    // Filter out incomplete trips (active trips with no end_timestamp)
+    const completedTrips = trips.filter(
+      (trip) => trip.end_timestamp && trip.ending_odometer
+    );
+
+    if (completedTrips.length === 0) {
       return {
         totalTrips: 0,
         totalDistance: "0.0",
@@ -77,10 +82,10 @@ export default function Dashboard() {
       };
     }
 
-    const totalTrips = trips.length;
+    const totalTrips = completedTrips.length;
 
     // Total distance
-    const totalDistance = trips.reduce((sum, trip) => {
+    const totalDistance = completedTrips.reduce((sum, trip) => {
       return (
         sum + (Number(trip.ending_odometer) - Number(trip.starting_odometer))
       );
@@ -90,9 +95,9 @@ export default function Dashboard() {
     const avgDistance = totalDistance / totalTrips;
 
     // Total duration in hours
-    const totalDuration = trips.reduce((sum, trip) => {
+    const totalDuration = completedTrips.reduce((sum, trip) => {
       const start = new Date(trip.start_timestamp).getTime();
-      const end = new Date(trip.end_timestamp).getTime();
+      const end = new Date(trip.end_timestamp!).getTime();
       return sum + (end - start);
     }, 0);
     const totalDurationHours = totalDuration / (1000 * 60 * 60);
@@ -101,14 +106,14 @@ export default function Dashboard() {
     const avgDurationHours = totalDurationHours / totalTrips;
 
     // Longest trip
-    const longestTrip = trips.reduce((max, trip) => {
+    const longestTrip = completedTrips.reduce((max, trip) => {
       const distance =
         Number(trip.ending_odometer) - Number(trip.starting_odometer);
       return distance > max ? distance : max;
     }, 0);
 
     // Shortest trip
-    const shortestTrip = trips.reduce((min, trip) => {
+    const shortestTrip = completedTrips.reduce((min, trip) => {
       const distance =
         Number(trip.ending_odometer) - Number(trip.starting_odometer);
       return distance < min ? distance : min;
@@ -117,14 +122,14 @@ export default function Dashboard() {
     // This week's trips
     const now = new Date();
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const thisWeekTrips = trips.filter((trip) => {
+    const thisWeekTrips = completedTrips.filter((trip) => {
       const tripDate = new Date(trip.start_timestamp);
       return tripDate >= weekAgo && tripDate <= now;
     }).length;
 
     // This month's trips
     const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    const thisMonthTrips = trips.filter((trip) => {
+    const thisMonthTrips = completedTrips.filter((trip) => {
       const tripDate = new Date(trip.start_timestamp);
       return tripDate >= monthAgo && tripDate <= now;
     }).length;
@@ -140,8 +145,8 @@ export default function Dashboard() {
     // Average speed (distance/duration)
     const avgSpeed = totalDistance / totalDurationHours;
 
-    // Earnings calculations
-    const totalEarnings = trips.reduce((sum, trip) => {
+    // Earnings calculations (use completedTrips for all earnings calculations)
+    const totalEarnings = completedTrips.reduce((sum, trip) => {
       return sum + (trip.earnings || 0);
     }, 0);
 
@@ -152,7 +157,7 @@ export default function Dashboard() {
     // Today's earnings
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const todayEarnings = trips
+    const todayEarnings = completedTrips
       .filter((trip) => {
         const tripDate = new Date(trip.start_timestamp);
         tripDate.setHours(0, 0, 0, 0);
@@ -161,7 +166,7 @@ export default function Dashboard() {
       .reduce((sum, trip) => sum + (trip.earnings || 0), 0);
 
     // This week's earnings
-    const weekEarnings = trips
+    const weekEarnings = completedTrips
       .filter((trip) => {
         const tripDate = new Date(trip.start_timestamp);
         return tripDate >= weekAgo && tripDate <= now;
@@ -169,7 +174,7 @@ export default function Dashboard() {
       .reduce((sum, trip) => sum + (trip.earnings || 0), 0);
 
     // This month's earnings
-    const monthEarnings = trips
+    const monthEarnings = completedTrips
       .filter((trip) => {
         const tripDate = new Date(trip.start_timestamp);
         return tripDate >= monthAgo && tripDate <= now;

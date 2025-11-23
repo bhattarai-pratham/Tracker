@@ -131,13 +131,17 @@ const TripDetail = () => {
     );
   }
 
-  const distance = calculateDistance(
-    trip.starting_odometer,
-    trip.ending_odometer
-  );
-  const duration = calculateDuration(trip.start_timestamp, trip.end_timestamp);
+  // Check if trip is active (incomplete)
+  const isTripActive = !trip.end_timestamp || !trip.ending_odometer;
+
+  const distance = isTripActive
+    ? "In Progress"
+    : calculateDistance(trip.starting_odometer, trip.ending_odometer!);
+  const duration = isTripActive
+    ? { hours: 0, minutes: 0, total: 0 }
+    : calculateDuration(trip.start_timestamp, trip.end_timestamp!);
   const startDateTime = formatDateTime(trip.start_timestamp);
-  const endDateTime = formatDateTime(trip.end_timestamp);
+  const endDateTime = isTripActive ? null : formatDateTime(trip.end_timestamp!);
 
   return (
     <View style={styles.container}>
@@ -151,18 +155,42 @@ const TripDetail = () => {
         </TouchableOpacity>
         <View style={styles.headerContent}>
           <Text style={styles.headerTitle}>Trip Details</Text>
-          <Text style={styles.headerSubtitle}>{startDateTime.date}</Text>
+          <Text style={styles.headerSubtitle}>
+            {isTripActive ? "Active Trip" : startDateTime.date}
+          </Text>
         </View>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Active Trip Warning */}
+        {isTripActive && (
+          <View
+            style={[
+              styles.mainCard,
+              { backgroundColor: COLORS.warning + "20", marginBottom: 16 },
+            ]}
+          >
+            <View style={styles.mainCardIcon}>
+              <Ionicons name="alert-circle" size={32} color={COLORS.warning} />
+            </View>
+            <Text style={[styles.mainCardLabel, { color: COLORS.warning }]}>
+              Trip In Progress
+            </Text>
+            <Text style={[styles.mainCardValue, { fontSize: 16 }]}>
+              This trip is currently active
+            </Text>
+          </View>
+        )}
+
         {/* Distance Card */}
         <View style={styles.mainCard}>
           <View style={styles.mainCardIcon}>
             <Ionicons name="navigate" size={32} color={COLORS.primary} />
           </View>
           <Text style={styles.mainCardLabel}>Total Distance</Text>
-          <Text style={styles.mainCardValue}>{distance} km</Text>
+          <Text style={styles.mainCardValue}>
+            {isTripActive ? distance : `${distance} km`}
+          </Text>
         </View>
 
         {/* Duration Card */}
@@ -172,7 +200,9 @@ const TripDetail = () => {
           </View>
           <Text style={styles.mainCardLabel}>Duration</Text>
           <Text style={styles.mainCardValue}>
-            {duration.hours}h {duration.minutes}m
+            {isTripActive
+              ? "In Progress"
+              : `${duration.hours}h ${duration.minutes}m`}
           </Text>
         </View>
 
@@ -214,7 +244,9 @@ const TripDetail = () => {
                 <Ionicons name="speedometer" size={24} color={COLORS.danger} />
               </View>
               <Text style={styles.odometerLabel}>Ending</Text>
-              <Text style={styles.odometerValue}>{trip.ending_odometer}</Text>
+              <Text style={styles.odometerValue}>
+                {trip.ending_odometer || "In Progress"}
+              </Text>
             </View>
           </View>
         </View>
@@ -238,16 +270,35 @@ const TripDetail = () => {
           <View style={styles.timelineLine} />
 
           {/* End Time */}
-          <View style={styles.timelineItem}>
-            <View style={styles.timelineDot}>
-              <Ionicons name="stop-circle" size={24} color={COLORS.danger} />
+          {!isTripActive && endDateTime && (
+            <View style={styles.timelineItem}>
+              <View style={styles.timelineDot}>
+                <Ionicons name="stop-circle" size={24} color={COLORS.danger} />
+              </View>
+              <View style={styles.timelineContent}>
+                <Text style={styles.timelineLabel}>Trip Ended</Text>
+                <Text style={styles.timelineDate}>{endDateTime.date}</Text>
+                <Text style={styles.timelineTime}>{endDateTime.time}</Text>
+              </View>
             </View>
-            <View style={styles.timelineContent}>
-              <Text style={styles.timelineLabel}>Trip Ended</Text>
-              <Text style={styles.timelineDate}>{endDateTime.date}</Text>
-              <Text style={styles.timelineTime}>{endDateTime.time}</Text>
+          )}
+
+          {/* Active Trip Indicator */}
+          {isTripActive && (
+            <View style={styles.timelineItem}>
+              <View style={styles.timelineDot}>
+                <Ionicons
+                  name="radio-button-on"
+                  size={24}
+                  color={COLORS.warning}
+                />
+              </View>
+              <View style={styles.timelineContent}>
+                <Text style={styles.timelineLabel}>Trip In Progress</Text>
+                <Text style={styles.timelineDate}>Not ended yet</Text>
+              </View>
             </View>
-          </View>
+          )}
         </View>
 
         {/* Photo Section Placeholder */}

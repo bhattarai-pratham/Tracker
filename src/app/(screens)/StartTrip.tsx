@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -24,10 +24,94 @@ const StartTrip = () => {
     is_trip_active,
     setTripId,
     setStartingOdometer,
-    saveToStorage,
+    isSaving,
   } = useTripContext();
 
   const [isLoading, setIsLoading] = useState(false);
+  const [pendingTripData, setPendingTripData] = useState<{
+    newTripID: string;
+    startingOdometer: string;
+    newStartTimestamp: Date;
+  } | null>(null);
+
+  // Watch for when saving is complete
+  useEffect(() => {
+    console.log("StartTrip save watch:", {
+      hasPendingData: !!pendingTripData,
+      isSaving,
+      isLoading,
+    });
+
+    if (pendingTripData && !isSaving) {
+      // Data has been saved to storage, show success alert
+      const { newTripID, startingOdometer, newStartTimestamp } =
+        pendingTripData;
+      setPendingTripData(null);
+      setIsLoading(false);
+
+      Alert.alert(
+        "Trip Started",
+        `Trip ID: ${newTripID}\nStarting Odometer: ${startingOdometer}\nStart Time: ${newStartTimestamp.toLocaleString(
+          "en-US",
+          {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+          }
+        )}`,
+        [
+          {
+            text: "OK",
+            onPress: () => {
+              console.log("Trip started and saved successfully");
+              router.back();
+            },
+          },
+        ]
+      );
+    }
+  }, [isSaving, pendingTripData]);
+
+  // Safety timeout - prevent infinite loading
+  useEffect(() => {
+    if (isLoading && pendingTripData) {
+      const timeout = setTimeout(() => {
+        console.warn("Save timeout reached - forcing completion");
+        const { newTripID, startingOdometer, newStartTimestamp } =
+          pendingTripData;
+
+        setIsLoading(false);
+        setPendingTripData(null);
+
+        Alert.alert(
+          "Trip Started",
+          `Trip ID: ${newTripID}\nStarting Odometer: ${startingOdometer}\nStart Time: ${newStartTimestamp.toLocaleString(
+            "en-US",
+            {
+              year: "numeric",
+              month: "2-digit",
+              day: "2-digit",
+              hour: "2-digit",
+              minute: "2-digit",
+            }
+          )}`,
+          [
+            {
+              text: "OK",
+              onPress: () => {
+                console.log("Trip started (timeout fallback)");
+                router.back();
+              },
+            },
+          ]
+        );
+      }, 5000); // 5 second safety timeout
+
+      return () => clearTimeout(timeout);
+    }
+  }, [isLoading, pendingTripData]);
 
   const handleTripStatusChange = async () => {
     if (!startingOdometer || isNaN(Number(startingOdometer))) {
@@ -68,33 +152,14 @@ const StartTrip = () => {
       setStartTimestamp(newStartTimestamp);
       setIsTripActive(true);
 
-      // Save to AsyncStorage for persistence
-      await saveToStorage();
+      // Store trip data and keep loading until save completes
+      setPendingTripData({
+        newTripID,
+        startingOdometer,
+        newStartTimestamp,
+      });
 
-      setIsLoading(false);
-
-      Alert.alert(
-        "Trip Started",
-        `Trip ID: ${newTripID}\nStarting Odometer: ${startingOdometer}\nStart Time: ${newStartTimestamp.toLocaleString(
-          "en-US",
-          {
-            year: "numeric",
-            month: "2-digit",
-            day: "2-digit",
-            hour: "2-digit",
-            minute: "2-digit",
-          }
-        )}`,
-        [
-          {
-            text: "OK",
-            onPress: () => {
-              console.log("Trip started successfully:", data);
-              router.back();
-            },
-          },
-        ]
-      );
+      // Don't set isLoading to false here - wait for auto-save to complete
     } catch (err) {
       console.error("Unexpected error:", err);
       Alert.alert("Error", "An unexpected error occurred. Please try again.");
@@ -143,9 +208,13 @@ const StartTrip = () => {
             variant="primary"
             shape="rounded"
             style={styles.startButton}
-            disabled={isLoading}
+            disabled={isLoading || isSaving}
           >
-            {isLoading ? <ActivityIndicator color="#fff" /> : "Start Trip"}
+            {isLoading || isSaving ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              "Start Trip"
+            )}
           </AppButton>
         </View>
       </View>
