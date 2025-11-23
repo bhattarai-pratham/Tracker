@@ -52,14 +52,12 @@ export default function Dashboard() {
     fetchTrips();
   };
 
-  // Calculate KPIs
+  // Calculate KPIs (same logic as before)
   const calculateKPIs = () => {
-    // Filter out incomplete trips (active trips with no end_timestamp)
     const completedTrips = trips.filter(
       (trip) => trip.end_timestamp && trip.ending_odometer
     );
-
-    if (completedTrips.length === 0) {
+    if (completedTrips.length === 0)
       return {
         totalTrips: 0,
         totalDistance: "0.0",
@@ -80,46 +78,34 @@ export default function Dashboard() {
         weekEarnings: "0.00",
         monthEarnings: "0.00",
       };
-    }
 
     const totalTrips = completedTrips.length;
-
-    // Total distance
-    const totalDistance = completedTrips.reduce((sum, trip) => {
-      return (
-        sum + (Number(trip.ending_odometer) - Number(trip.starting_odometer))
-      );
-    }, 0);
-
-    // Average distance per trip
+    const totalDistance = completedTrips.reduce(
+      (sum, trip) =>
+        sum + (Number(trip.ending_odometer) - Number(trip.starting_odometer)),
+      0
+    );
     const avgDistance = totalDistance / totalTrips;
 
-    // Total duration in hours
     const totalDuration = completedTrips.reduce((sum, trip) => {
       const start = new Date(trip.start_timestamp).getTime();
       const end = new Date(trip.end_timestamp!).getTime();
       return sum + (end - start);
     }, 0);
     const totalDurationHours = totalDuration / (1000 * 60 * 60);
-
-    // Average duration per trip
     const avgDurationHours = totalDurationHours / totalTrips;
 
-    // Longest trip
     const longestTrip = completedTrips.reduce((max, trip) => {
       const distance =
         Number(trip.ending_odometer) - Number(trip.starting_odometer);
       return distance > max ? distance : max;
     }, 0);
-
-    // Shortest trip
     const shortestTrip = completedTrips.reduce((min, trip) => {
       const distance =
         Number(trip.ending_odometer) - Number(trip.starting_odometer);
       return distance < min ? distance : min;
     }, Infinity);
 
-    // This week's trips
     const now = new Date();
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     const thisWeekTrips = completedTrips.filter((trip) => {
@@ -127,57 +113,46 @@ export default function Dashboard() {
       return tripDate >= weekAgo && tripDate <= now;
     }).length;
 
-    // This month's trips
     const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     const thisMonthTrips = completedTrips.filter((trip) => {
       const tripDate = new Date(trip.start_timestamp);
       return tripDate >= monthAgo && tripDate <= now;
     }).length;
 
-    // Current odometer - get the most recent trip's ending odometer
-    // If ending_odometer is null or "0", fall back to starting_odometer
-    const latestTrip = trips[0]; // trips are already sorted by start_timestamp descending
+    const latestTrip = trips[0];
     const currentOdometer =
       latestTrip?.ending_odometer && latestTrip.ending_odometer !== "0"
         ? latestTrip.ending_odometer
         : latestTrip?.starting_odometer || "0";
 
-    // Average speed (distance/duration)
     const avgSpeed = totalDistance / totalDurationHours;
-
-    // Earnings calculations (use completedTrips for all earnings calculations)
-    const totalEarnings = completedTrips.reduce((sum, trip) => {
-      return sum + (trip.earnings || 0);
-    }, 0);
-
+    const totalEarnings = completedTrips.reduce(
+      (sum, trip) => sum + (trip.earnings || 0),
+      0
+    );
     const avgEarningsPerTrip = totalEarnings / totalTrips;
     const earningsPerHour = totalEarnings / totalDurationHours;
     const earningsPerKm = totalEarnings / totalDistance;
 
-    // Today's earnings
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const todayEarnings = completedTrips
       .filter((trip) => {
-        const tripDate = new Date(trip.start_timestamp);
-        tripDate.setHours(0, 0, 0, 0);
-        return tripDate.getTime() === today.getTime();
+        const d = new Date(trip.start_timestamp);
+        d.setHours(0, 0, 0, 0);
+        return d.getTime() === today.getTime();
       })
       .reduce((sum, trip) => sum + (trip.earnings || 0), 0);
-
-    // This week's earnings
     const weekEarnings = completedTrips
       .filter((trip) => {
-        const tripDate = new Date(trip.start_timestamp);
-        return tripDate >= weekAgo && tripDate <= now;
+        const d = new Date(trip.start_timestamp);
+        return d >= weekAgo && d <= now;
       })
       .reduce((sum, trip) => sum + (trip.earnings || 0), 0);
-
-    // This month's earnings
     const monthEarnings = completedTrips
       .filter((trip) => {
-        const tripDate = new Date(trip.start_timestamp);
-        return tripDate >= monthAgo && tripDate <= now;
+        const d = new Date(trip.start_timestamp);
+        return d >= monthAgo && d <= now;
       })
       .reduce((sum, trip) => sum + (trip.earnings || 0), 0);
 
@@ -205,7 +180,7 @@ export default function Dashboard() {
 
   const kpis = calculateKPIs();
 
-  if (loading) {
+  if (loading)
     return (
       <View style={styles.container}>
         <View style={styles.header}>
@@ -226,9 +201,8 @@ export default function Dashboard() {
         </View>
       </View>
     );
-  }
 
-  if (error) {
+  if (error)
     return (
       <View style={styles.container}>
         <View style={styles.header}>
@@ -249,7 +223,6 @@ export default function Dashboard() {
         </View>
       </View>
     );
-  }
 
   return (
     <View style={styles.container}>
@@ -283,19 +256,33 @@ export default function Dashboard() {
         {/* Primary Stats */}
         <View style={styles.primaryRow}>
           <View
-            style={[styles.primaryCard, { backgroundColor: COLORS.primary }]}
+            style={[
+              styles.primaryCard,
+              { backgroundColor: COLORS.primaryLightStrong },
+            ]}
           >
-            <Ionicons name="car" size={32} color="#fff" />
-            <Text style={styles.primaryValue}>{kpis.totalTrips}</Text>
-            <Text style={styles.primaryLabel}>Total Trips</Text>
+            <Ionicons name="car" size={32} color={COLORS.primaryDark} />
+            <Text style={[styles.primaryValue, { color: COLORS.primaryDark }]}>
+              {kpis.totalTrips}
+            </Text>
+            <Text style={[styles.primaryLabel, { color: COLORS.primaryDark }]}>
+              Total Trips
+            </Text>
           </View>
 
           <View
-            style={[styles.primaryCard, { backgroundColor: COLORS.accent }]}
+            style={[
+              styles.primaryCard,
+              { backgroundColor: COLORS.accentLightStrong },
+            ]}
           >
-            <Ionicons name="speedometer" size={32} color="#fff" />
-            <Text style={styles.primaryValue}>{kpis.currentOdometer}</Text>
-            <Text style={styles.primaryLabel}>Current Odometer</Text>
+            <Ionicons name="speedometer" size={32} color={COLORS.accent} />
+            <Text style={[styles.primaryValue, { color: COLORS.accent }]}>
+              {kpis.currentOdometer}
+            </Text>
+            <Text style={[styles.primaryLabel, { color: COLORS.accent }]}>
+              Current Odometer
+            </Text>
           </View>
         </View>
 
@@ -303,11 +290,16 @@ export default function Dashboard() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Distance Analytics</Text>
           <View style={styles.statsGrid}>
-            <View style={styles.statCard}>
+            <View
+              style={[
+                styles.statCard,
+                { backgroundColor: COLORS.primaryLighter },
+              ]}
+            >
               <View
                 style={[
                   styles.iconCircle,
-                  { backgroundColor: COLORS.primary + "20" },
+                  { backgroundColor: COLORS.primaryLight },
                 ]}
               >
                 <Ionicons name="navigate" size={24} color={COLORS.primary} />
@@ -316,11 +308,16 @@ export default function Dashboard() {
               <Text style={styles.statLabel}>Total Distance</Text>
             </View>
 
-            <View style={styles.statCard}>
+            <View
+              style={[
+                styles.statCard,
+                { backgroundColor: COLORS.successLighter },
+              ]}
+            >
               <View
                 style={[
                   styles.iconCircle,
-                  { backgroundColor: COLORS.success + "20" },
+                  { backgroundColor: COLORS.successLight },
                 ]}
               >
                 <Ionicons name="analytics" size={24} color={COLORS.success} />
@@ -329,11 +326,16 @@ export default function Dashboard() {
               <Text style={styles.statLabel}>Avg Per Trip</Text>
             </View>
 
-            <View style={styles.statCard}>
+            <View
+              style={[
+                styles.statCard,
+                { backgroundColor: COLORS.warningLighter },
+              ]}
+            >
               <View
                 style={[
                   styles.iconCircle,
-                  { backgroundColor: COLORS.warning + "20" },
+                  { backgroundColor: COLORS.warningLight },
                 ]}
               >
                 <Ionicons name="trending-up" size={24} color={COLORS.warning} />
@@ -342,11 +344,16 @@ export default function Dashboard() {
               <Text style={styles.statLabel}>Longest Trip</Text>
             </View>
 
-            <View style={styles.statCard}>
+            <View
+              style={[
+                styles.statCard,
+                { backgroundColor: COLORS.dangerLighter },
+              ]}
+            >
               <View
                 style={[
                   styles.iconCircle,
-                  { backgroundColor: COLORS.danger + "20" },
+                  { backgroundColor: COLORS.dangerLight },
                 ]}
               >
                 <Ionicons
@@ -365,13 +372,22 @@ export default function Dashboard() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Time Analytics</Text>
           <View style={styles.timeRow}>
-            <View style={styles.timeCard}>
+            <View
+              style={[
+                styles.timeCard,
+                { backgroundColor: COLORS.primaryLighter },
+              ]}
+            >
               <Ionicons name="time" size={28} color={COLORS.primary} />
               <Text style={styles.timeValue}>{kpis.totalDurationHours}h</Text>
               <Text style={styles.timeLabel}>Total Duration</Text>
             </View>
-
-            <View style={styles.timeCard}>
+            <View
+              style={[
+                styles.timeCard,
+                { backgroundColor: COLORS.accentLighter },
+              ]}
+            >
               <Ionicons name="timer" size={28} color={COLORS.accent} />
               <Text style={styles.timeValue}>{kpis.avgDurationHours}h</Text>
               <Text style={styles.timeLabel}>Avg Duration</Text>
@@ -383,11 +399,16 @@ export default function Dashboard() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Earnings Analytics</Text>
           <View style={styles.statsGrid}>
-            <View style={styles.statCard}>
+            <View
+              style={[
+                styles.statCard,
+                { backgroundColor: COLORS.successLighter },
+              ]}
+            >
               <View
                 style={[
                   styles.iconCircle,
-                  { backgroundColor: COLORS.success + "20" },
+                  { backgroundColor: COLORS.successLight },
                 ]}
               >
                 <Ionicons name="cash" size={24} color={COLORS.success} />
@@ -396,11 +417,16 @@ export default function Dashboard() {
               <Text style={styles.statLabel}>Total Earnings</Text>
             </View>
 
-            <View style={styles.statCard}>
+            <View
+              style={[
+                styles.statCard,
+                { backgroundColor: COLORS.primaryLighter },
+              ]}
+            >
               <View
                 style={[
                   styles.iconCircle,
-                  { backgroundColor: COLORS.primary + "20" },
+                  { backgroundColor: COLORS.primaryLight },
                 ]}
               >
                 <Ionicons name="wallet" size={24} color={COLORS.primary} />
@@ -409,11 +435,16 @@ export default function Dashboard() {
               <Text style={styles.statLabel}>Avg Per Trip</Text>
             </View>
 
-            <View style={styles.statCard}>
+            <View
+              style={[
+                styles.statCard,
+                { backgroundColor: COLORS.accentLighter },
+              ]}
+            >
               <View
                 style={[
                   styles.iconCircle,
-                  { backgroundColor: COLORS.accent + "20" },
+                  { backgroundColor: COLORS.accentLight },
                 ]}
               >
                 <Ionicons name="time" size={24} color={COLORS.accent} />
@@ -422,11 +453,16 @@ export default function Dashboard() {
               <Text style={styles.statLabel}>Per Hour</Text>
             </View>
 
-            <View style={styles.statCard}>
+            <View
+              style={[
+                styles.statCard,
+                { backgroundColor: COLORS.warningLighter },
+              ]}
+            >
               <View
                 style={[
                   styles.iconCircle,
-                  { backgroundColor: COLORS.warning + "20" },
+                  { backgroundColor: COLORS.warningLight },
                 ]}
               >
                 <Ionicons name="navigate" size={24} color={COLORS.warning} />
@@ -441,7 +477,12 @@ export default function Dashboard() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Earnings by Period</Text>
           <View style={styles.earningsColumn}>
-            <View style={styles.activityCard}>
+            <View
+              style={[
+                styles.activityCard,
+                { backgroundColor: COLORS.successLighter },
+              ]}
+            >
               <View
                 style={[
                   styles.activityIcon,
@@ -454,7 +495,12 @@ export default function Dashboard() {
               <Text style={styles.activityLabel}>Today</Text>
             </View>
 
-            <View style={styles.activityCard}>
+            <View
+              style={[
+                styles.activityCard,
+                { backgroundColor: COLORS.primaryLighter },
+              ]}
+            >
               <View
                 style={[
                   styles.activityIcon,
@@ -467,7 +513,12 @@ export default function Dashboard() {
               <Text style={styles.activityLabel}>This Week</Text>
             </View>
 
-            <View style={styles.activityCard}>
+            <View
+              style={[
+                styles.activityCard,
+                { backgroundColor: COLORS.accentLighter },
+              ]}
+            >
               <View
                 style={[
                   styles.activityIcon,
@@ -486,7 +537,12 @@ export default function Dashboard() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Recent Activity</Text>
           <View style={styles.activityRow}>
-            <View style={styles.activityCard}>
+            <View
+              style={[
+                styles.activityCard,
+                { backgroundColor: COLORS.primaryLighter },
+              ]}
+            >
               <View
                 style={[
                   styles.activityIcon,
@@ -499,7 +555,12 @@ export default function Dashboard() {
               <Text style={styles.activityLabel}>This Week</Text>
             </View>
 
-            <View style={styles.activityCard}>
+            <View
+              style={[
+                styles.activityCard,
+                { backgroundColor: COLORS.accentLighter },
+              ]}
+            >
               <View
                 style={[
                   styles.activityIcon,
@@ -521,10 +582,7 @@ export default function Dashboard() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
+  container: { flex: 1, backgroundColor: COLORS.background },
   header: {
     backgroundColor: COLORS.primary,
     paddingTop: 60,
@@ -534,20 +592,14 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
-  headerLeft: {
-    flex: 1,
-  },
+  headerLeft: { flex: 1 },
   headerTitle: {
     fontSize: 28,
     fontWeight: "bold",
     color: "#fff",
     marginBottom: 4,
   },
-  headerSubtitle: {
-    fontSize: 14,
-    color: "#fff",
-    opacity: 0.9,
-  },
+  headerSubtitle: { fontSize: 14, color: "#fff", opacity: 0.9 },
   exportButton: {
     width: 44,
     height: 44,
@@ -556,17 +608,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  content: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: 16,
-  },
-  primaryRow: {
-    flexDirection: "row",
-    gap: 12,
-    marginBottom: 24,
-  },
+  content: { flex: 1 },
+  scrollContent: { padding: 16 },
+  primaryRow: { flexDirection: "row", gap: 12, marginBottom: 24 },
   primaryCard: {
     flex: 1,
     borderRadius: 16,
@@ -581,29 +625,18 @@ const styles = StyleSheet.create({
   primaryValue: {
     fontSize: 32,
     fontWeight: "bold",
-    color: "#fff",
     marginTop: 12,
     marginBottom: 4,
   },
-  primaryLabel: {
-    fontSize: 14,
-    color: "#fff",
-    opacity: 0.9,
-  },
-  section: {
-    marginBottom: 24,
-  },
+  primaryLabel: { fontSize: 14, opacity: 0.9 },
+  section: { marginBottom: 24 },
   sectionTitle: {
     fontSize: 18,
     fontWeight: "bold",
     color: COLORS.text,
     marginBottom: 12,
   },
-  statsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-  },
+  statsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
   statCard: {
     width: (width - 48) / 2,
     backgroundColor: "#fff",
@@ -630,15 +663,8 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     marginBottom: 4,
   },
-  statLabel: {
-    fontSize: 12,
-    color: COLORS.muted,
-    textAlign: "center",
-  },
-  timeRow: {
-    flexDirection: "row",
-    gap: 12,
-  },
+  statLabel: { fontSize: 12, color: COLORS.muted, textAlign: "center" },
+  timeRow: { flexDirection: "row", gap: 12 },
   timeCard: {
     flex: 1,
     backgroundColor: "#fff",
@@ -658,19 +684,9 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 4,
   },
-  timeLabel: {
-    fontSize: 11,
-    color: COLORS.muted,
-    textAlign: "center",
-  },
-  activityRow: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  earningsColumn: {
-    flexDirection: "column",
-    gap: 12,
-  },
+  timeLabel: { fontSize: 11, color: COLORS.muted, textAlign: "center" },
+  activityRow: { flexDirection: "row", gap: 12 },
+  earningsColumn: { flexDirection: "column", gap: 12 },
   activityCard: {
     flex: 1,
     backgroundColor: "#fff",
@@ -697,47 +713,14 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     marginBottom: 4,
   },
-  activityLabel: {
-    fontSize: 13,
-    color: COLORS.muted,
-  },
-  infoCard: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  infoRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  infoText: {
-    flex: 1,
-    fontSize: 14,
-    color: COLORS.text,
-    lineHeight: 20,
-  },
-  infoDivider: {
-    height: 1,
-    backgroundColor: COLORS.card,
-    marginVertical: 12,
-  },
+  activityLabel: { fontSize: 13, color: COLORS.muted },
   centered: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
   },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: COLORS.muted,
-  },
+  loadingText: { marginTop: 16, fontSize: 16, color: COLORS.muted },
   errorText: {
     marginTop: 16,
     fontSize: 16,

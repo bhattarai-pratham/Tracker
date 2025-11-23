@@ -85,10 +85,8 @@ const Trips = () => {
   const renderTripCard = ({ item }: { item: Trip }) => (
     <TouchableOpacity
       style={styles.card}
-      activeOpacity={0.7}
-      onPress={() => {
-        router.push(`/${item.id}`);
-      }}
+      activeOpacity={0.8}
+      onPress={() => router.push(`/${item.id}`)}
     >
       <View style={styles.cardHeader}>
         <View style={styles.tripIdContainer}>
@@ -161,7 +159,7 @@ const Trips = () => {
           <Text style={styles.subtitle}>Loading...</Text>
         </View>
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
+          <ActivityIndicator size="large" color={COLORS.primaryDark} />
           <Text style={styles.loadingText}>Loading trips...</Text>
         </View>
       </View>
@@ -249,15 +247,17 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   card: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
+    backgroundColor: COLORS.cardSelected, // softer card background
+    borderRadius: 16,
     padding: 16,
     marginBottom: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowColor: COLORS.primaryLight,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 4,
+    borderWidth: 4,
+    borderColor: COLORS.cardSelectedStrong,
   },
   cardHeader: {
     flexDirection: "row",
@@ -270,18 +270,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
   },
-  tripId: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: COLORS.text,
-  },
   badgeRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
   },
   earningsBadge: {
-    backgroundColor: COLORS.success,
+    backgroundColor: COLORS.successLight, // lighter green
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
@@ -289,10 +284,10 @@ const styles = StyleSheet.create({
   earningsText: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#fff",
+    color: COLORS.success, // dark green
   },
   distanceBadge: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.primaryLight, // soft teal
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
@@ -300,7 +295,7 @@ const styles = StyleSheet.create({
   distanceText: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#fff",
+    color: COLORS.primaryDark,
   },
   divider: {
     height: 1,
@@ -336,11 +331,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-  },
-  dateItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
   },
   dateText: {
     fontSize: 12,

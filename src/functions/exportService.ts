@@ -98,24 +98,26 @@ const calculateDuration = (start: string, end: string): string => {
 
 // Format trip data for export
 export const formatTripDataForExport = (trips: Trip[]): FormattedTrip[] => {
-  return trips.map((trip) => {
-    const distance = (
-      Number(trip.ending_odometer) - Number(trip.starting_odometer)
-    ).toFixed(1);
+  return trips
+    .filter((trip) => trip.ending_odometer && trip.end_timestamp) // Only include completed trips
+    .map((trip) => {
+      const distance = (
+        Number(trip.ending_odometer) - Number(trip.starting_odometer)
+      ).toFixed(1);
 
-    return {
-      id: trip.id,
-      startDate: formatDate(trip.start_timestamp),
-      startTime: formatTime(trip.start_timestamp),
-      endDate: formatDate(trip.end_timestamp),
-      endTime: formatTime(trip.end_timestamp),
-      startingOdometer: trip.starting_odometer,
-      endingOdometer: trip.ending_odometer,
-      distance: `${distance} km`,
-      duration: calculateDuration(trip.start_timestamp, trip.end_timestamp),
-      earnings: trip.earnings ? `$${trip.earnings.toFixed(2)}` : "No data",
-    };
-  });
+      return {
+        id: trip.id,
+        startDate: formatDate(trip.start_timestamp),
+        startTime: formatTime(trip.start_timestamp),
+        endDate: formatDate(trip.end_timestamp!),
+        endTime: formatTime(trip.end_timestamp!),
+        startingOdometer: trip.starting_odometer,
+        endingOdometer: trip.ending_odometer!,
+        distance: `${distance} km`,
+        duration: calculateDuration(trip.start_timestamp, trip.end_timestamp!),
+        earnings: trip.earnings ? `$${trip.earnings.toFixed(2)}` : "No data",
+      };
+    });
 };
 
 // Calculate summary statistics
@@ -123,17 +125,21 @@ export const calculateSummary = (
   trips: Trip[],
   options: ExportOptions
 ): ExportSummary => {
-  const totalTrips = trips.length;
+  // Only include completed trips in summary
+  const completedTrips = trips.filter(
+    (trip) => trip.ending_odometer && trip.end_timestamp
+  );
+  const totalTrips = completedTrips.length;
 
-  const totalDistance = trips.reduce((sum, trip) => {
+  const totalDistance = completedTrips.reduce((sum, trip) => {
     return (
       sum + (Number(trip.ending_odometer) - Number(trip.starting_odometer))
     );
   }, 0);
 
-  const totalDurationMs = trips.reduce((sum, trip) => {
+  const totalDurationMs = completedTrips.reduce((sum, trip) => {
     const start = new Date(trip.start_timestamp).getTime();
-    const end = new Date(trip.end_timestamp).getTime();
+    const end = new Date(trip.end_timestamp!).getTime();
     return sum + (end - start);
   }, 0);
 
@@ -150,7 +156,7 @@ export const calculateSummary = (
     (avgDurationMs % (1000 * 60 * 60)) / (1000 * 60)
   );
 
-  const totalEarnings = trips.reduce((sum, trip) => {
+  const totalEarnings = completedTrips.reduce((sum, trip) => {
     return sum + (trip.earnings || 0);
   }, 0);
 

@@ -55,14 +55,16 @@ const Export = () => {
       description: "Portable Document Format",
       icon: "document",
       color: COLORS.danger,
+      light: COLORS.dangerLight,
     },
     {
       id: "excel",
       name: "Excel",
-      description: "Microsoft Excel format (.xlsx)",
+      description: "Microsoft Excel (.xlsx)",
       icon: "grid",
       color: COLORS.accent,
-      disabled: includePhotos, // Disable if photos are included
+      light: COLORS.accentLight,
+      disabled: includePhotos,
     },
   ];
 
@@ -115,18 +117,15 @@ const Export = () => {
         includePhotos,
       };
 
-      let result;
-      if (selectedFormat === "excel") {
-        result = await exportToExcel(fetchedTrips, exportOptions);
-      } else {
-        result = await exportToPDF(fetchedTrips, exportOptions);
-      }
+      const result =
+        selectedFormat === "excel"
+          ? await exportToExcel(fetchedTrips, exportOptions)
+          : await exportToPDF(fetchedTrips, exportOptions);
 
-      if (result.success) {
-        Alert.alert("Export Successful", result.message);
-      } else {
-        Alert.alert("Export Failed", result.message);
-      }
+      Alert.alert(
+        result.success ? "Export Successful" : "Export Failed",
+        result.message
+      );
     } catch (error) {
       console.error("Export error:", error);
       Alert.alert("Error", "An unexpected error occurred during export");
@@ -163,18 +162,15 @@ const Export = () => {
         includePhotos,
       };
 
-      let result;
-      if (selectedFormat === "excel") {
-        result = await shareExcelFile(fetchedTrips, exportOptions);
-      } else {
-        result = await sharePDFFile(fetchedTrips, exportOptions);
-      }
+      const result =
+        selectedFormat === "excel"
+          ? await shareExcelFile(fetchedTrips, exportOptions)
+          : await sharePDFFile(fetchedTrips, exportOptions);
 
-      if (result.success) {
-        Alert.alert("Share Successful", result.message);
-      } else {
-        Alert.alert("Share Failed", result.message);
-      }
+      Alert.alert(
+        result.success ? "Share Successful" : "Share Failed",
+        result.message
+      );
     } catch (error) {
       console.error("Share error:", error);
       Alert.alert("Error", "An unexpected error occurred during share");
@@ -186,7 +182,6 @@ const Export = () => {
   const handleDateRangeSelect = (rangeId: string) => {
     setSelectedDateRange(rangeId);
     if (rangeId === "custom") {
-      // TODO: Open date picker modal
       Alert.alert("Custom Date Range", "Date picker will be implemented soon");
     }
   };
@@ -268,10 +263,7 @@ const Export = () => {
                 disabled={format.disabled}
               >
                 <View
-                  style={[
-                    styles.formatIcon,
-                    { backgroundColor: format.color + "20" },
-                  ]}
+                  style={[styles.formatIcon, { backgroundColor: format.light }]}
                 >
                   <Ionicons
                     name={format.icon as any}
@@ -330,7 +322,7 @@ const Export = () => {
               <View
                 style={[
                   styles.optionIcon,
-                  { backgroundColor: COLORS.primary + "20" },
+                  { backgroundColor: COLORS.primaryLight },
                 ]}
               >
                 <Ionicons
@@ -551,7 +543,7 @@ const styles = StyleSheet.create({
   },
   formatCardSelected: {
     borderColor: COLORS.primary,
-    backgroundColor: COLORS.primary + "05",
+    backgroundColor: COLORS.primaryLight,
   },
   formatCardDisabled: {
     opacity: 0.5,
@@ -608,7 +600,7 @@ const styles = StyleSheet.create({
   },
   optionCardSelected: {
     borderColor: COLORS.primary,
-    backgroundColor: COLORS.primary + "05",
+    backgroundColor: COLORS.primaryLight,
   },
   optionIcon: {
     width: 48,
@@ -654,11 +646,6 @@ const styles = StyleSheet.create({
   toggle: {
     marginLeft: "auto",
   },
-  settingDivider: {
-    height: 1,
-    backgroundColor: COLORS.card,
-    marginVertical: 16,
-  },
   photoWarning: {
     fontSize: 12,
     color: COLORS.warning,
@@ -683,7 +670,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    backgroundColor: COLORS.primary + "10",
+    backgroundColor: COLORS.primaryLight,
     borderRadius: 12,
     padding: 16,
     borderLeftWidth: 4,

@@ -33,7 +33,6 @@ const TripDetail = () => {
 
         if (error) {
           setError(error.message);
-          console.error("Error fetching trip:", error);
         } else if (!data) {
           setError("Trip not found");
         } else {
@@ -41,7 +40,6 @@ const TripDetail = () => {
         }
       } catch (err) {
         setError("Failed to fetch trip");
-        console.error("Error:", err);
       } finally {
         setLoading(false);
       }
@@ -50,9 +48,8 @@ const TripDetail = () => {
     fetchTrip();
   }, [tripID]);
 
-  const calculateDistance = (start: string, end: string) => {
-    return (Number(end) - Number(start)).toFixed(1);
-  };
+  const calculateDistance = (start: string, end: string) =>
+    (Number(end) - Number(start)).toFixed(1);
 
   const calculateDuration = (start: string, end: string) => {
     const startDate = new Date(start);
@@ -87,7 +84,7 @@ const TripDetail = () => {
             style={styles.backButton}
             onPress={() => router.back()}
           >
-            <Ionicons name="arrow-back" size={24} color="#fff" />
+            <Ionicons name="arrow-back" size={24} color={COLORS.primaryLight} />
           </TouchableOpacity>
           <View style={styles.headerContent}>
             <Text style={styles.headerTitle}>Trip Details</Text>
@@ -110,7 +107,7 @@ const TripDetail = () => {
             style={styles.backButton}
             onPress={() => router.back()}
           >
-            <Ionicons name="arrow-back" size={24} color="#fff" />
+            <Ionicons name="arrow-back" size={24} color={COLORS.primaryLight} />
           </TouchableOpacity>
           <View style={styles.headerContent}>
             <Text style={styles.headerTitle}>Trip Details</Text>
@@ -131,15 +128,16 @@ const TripDetail = () => {
     );
   }
 
-  // Check if trip is active (incomplete)
   const isTripActive = !trip.end_timestamp || !trip.ending_odometer;
 
   const distance = isTripActive
     ? "In Progress"
     : calculateDistance(trip.starting_odometer, trip.ending_odometer!);
+
   const duration = isTripActive
     ? { hours: 0, minutes: 0, total: 0 }
     : calculateDuration(trip.start_timestamp, trip.end_timestamp!);
+
   const startDateTime = formatDateTime(trip.start_timestamp);
   const endDateTime = isTripActive ? null : formatDateTime(trip.end_timestamp!);
 
@@ -151,7 +149,7 @@ const TripDetail = () => {
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <Ionicons name="arrow-back" size={24} color="#fff" />
+          <Ionicons name="arrow-back" size={24} color={COLORS.primaryLight} />
         </TouchableOpacity>
         <View style={styles.headerContent}>
           <Text style={styles.headerTitle}>Trip Details</Text>
@@ -162,13 +160,9 @@ const TripDetail = () => {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Active Trip Warning */}
         {isTripActive && (
           <View
-            style={[
-              styles.mainCard,
-              { backgroundColor: COLORS.warning + "20", marginBottom: 16 },
-            ]}
+            style={[styles.mainCard, { backgroundColor: COLORS.warningLight }]}
           >
             <View style={styles.mainCardIcon}>
               <Ionicons name="alert-circle" size={32} color={COLORS.warning} />
@@ -182,7 +176,6 @@ const TripDetail = () => {
           </View>
         )}
 
-        {/* Distance Card */}
         <View style={styles.mainCard}>
           <View style={styles.mainCardIcon}>
             <Ionicons name="navigate" size={32} color={COLORS.primary} />
@@ -193,8 +186,7 @@ const TripDetail = () => {
           </Text>
         </View>
 
-        {/* Duration Card */}
-        <View style={[styles.mainCard, { backgroundColor: COLORS.card }]}>
+        <View style={styles.mainCard}>
           <View style={styles.mainCardIcon}>
             <Ionicons name="time" size={32} color={COLORS.accent} />
           </View>
@@ -206,9 +198,11 @@ const TripDetail = () => {
           </Text>
         </View>
 
-        {/* Earnings Card */}
         <View
-          style={[styles.mainCard, { backgroundColor: COLORS.success + "20" }]}
+          style={[
+            styles.currencyCard,
+            { backgroundColor: COLORS.successLight },
+          ]}
         >
           <View style={styles.mainCardIcon}>
             <Ionicons name="cash" size={32} color={COLORS.success} />
@@ -219,7 +213,6 @@ const TripDetail = () => {
           </Text>
         </View>
 
-        {/* Odometer Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Odometer Readings</Text>
           <View style={styles.odometerContainer}>
@@ -251,11 +244,8 @@ const TripDetail = () => {
           </View>
         </View>
 
-        {/* Timeline Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Trip Timeline</Text>
-
-          {/* Start Time */}
           <View style={styles.timelineItem}>
             <View style={styles.timelineDot}>
               <Ionicons name="play-circle" size={24} color={COLORS.success} />
@@ -269,7 +259,6 @@ const TripDetail = () => {
 
           <View style={styles.timelineLine} />
 
-          {/* End Time */}
           {!isTripActive && endDateTime && (
             <View style={styles.timelineItem}>
               <View style={styles.timelineDot}>
@@ -283,7 +272,6 @@ const TripDetail = () => {
             </View>
           )}
 
-          {/* Active Trip Indicator */}
           {isTripActive && (
             <View style={styles.timelineItem}>
               <View style={styles.timelineDot}>
@@ -301,7 +289,6 @@ const TripDetail = () => {
           )}
         </View>
 
-        {/* Photo Section Placeholder */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Photos</Text>
           <View style={styles.photoPlaceholder}>
@@ -319,10 +306,7 @@ const TripDetail = () => {
 export default TripDetail;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
+  container: { flex: 1, backgroundColor: COLORS.background },
   header: {
     backgroundColor: COLORS.primary,
     paddingTop: 60,
@@ -331,38 +315,23 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
   },
-  backButton: {
-    marginRight: 16,
-  },
-  headerContent: {
-    flex: 1,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#fff",
-  },
+  backButton: { marginRight: 16 },
+  headerContent: { flex: 1 },
+  headerTitle: { fontSize: 24, fontWeight: "bold", color: COLORS.primaryLight },
   headerSubtitle: {
     fontSize: 14,
-    color: "#fff",
+    color: COLORS.primaryLight,
     opacity: 0.9,
     marginTop: 2,
   },
-  content: {
-    flex: 1,
-    padding: 16,
-  },
+  content: { flex: 1, padding: 16 },
   centered: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
   },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: COLORS.muted,
-  },
+  loadingText: { marginTop: 16, fontSize: 16, color: COLORS.muted },
   errorText: {
     marginTop: 16,
     fontSize: 16,
@@ -377,39 +346,47 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   retryButtonText: {
-    color: "#fff",
+    color: COLORS.primaryLight,
     fontSize: 16,
     fontWeight: "600",
   },
   mainCard: {
-    backgroundColor: "#fff",
+    backgroundColor: COLORS.card,
     borderRadius: 16,
     padding: 24,
     alignItems: "center",
     marginBottom: 12,
-    shadowColor: "#000",
+    shadowColor: COLORS.primaryLight,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    borderWidth: 3,
+    borderColor: COLORS.cardSelectedStrong,
   },
-  mainCardIcon: {
+  currencyCard: {
+    backgroundColor: COLORS.card,
+    borderRadius: 16,
+    padding: 24,
+    alignItems: "center",
     marginBottom: 12,
+    shadowColor: COLORS.primaryLight,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    borderWidth: 3,
+    borderColor: COLORS.successLightStrong,
   },
+  mainCardIcon: { marginBottom: 12 },
   mainCardLabel: {
     fontSize: 14,
     color: COLORS.muted,
     fontWeight: "500",
     marginBottom: 8,
   },
-  mainCardValue: {
-    fontSize: 36,
-    fontWeight: "bold",
-    color: COLORS.text,
-  },
-  section: {
-    marginTop: 24,
-  },
+  mainCardValue: { fontSize: 36, fontWeight: "bold", color: COLORS.text },
+  section: { marginTop: 24 },
   sectionTitle: {
     fontSize: 18,
     fontWeight: "bold",
@@ -423,50 +400,45 @@ const styles = StyleSheet.create({
   },
   odometerCard: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: COLORS.card,
     borderRadius: 12,
     padding: 16,
     alignItems: "center",
-    shadowColor: "#000",
+    shadowColor: COLORS.primaryLight,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    borderWidth: 3,
+    borderColor: COLORS.cardSelectedStrong,
   },
-  odometerIcon: {
-    marginBottom: 8,
-  },
+  odometerIcon: { marginBottom: 8 },
   odometerLabel: {
     fontSize: 12,
     color: COLORS.muted,
     fontWeight: "500",
     marginBottom: 4,
   },
-  odometerValue: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: COLORS.text,
-  },
-  arrowContainer: {
-    marginHorizontal: 12,
-  },
+  odometerValue: { fontSize: 20, fontWeight: "bold", color: COLORS.text },
+  arrowContainer: { marginHorizontal: 12 },
   timelineItem: {
     flexDirection: "row",
     alignItems: "flex-start",
+    marginBottom: 12,
   },
-  timelineDot: {
-    marginRight: 16,
-  },
+  timelineDot: { marginRight: 16 },
   timelineContent: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: COLORS.card,
     borderRadius: 12,
     padding: 16,
-    shadowColor: "#000",
+    shadowColor: COLORS.primaryLight,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    borderWidth: 3,
+    borderColor: COLORS.cardSelectedStrong,
   },
   timelineLabel: {
     fontSize: 16,
@@ -474,15 +446,8 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     marginBottom: 8,
   },
-  timelineDate: {
-    fontSize: 14,
-    color: COLORS.text,
-    marginBottom: 4,
-  },
-  timelineTime: {
-    fontSize: 14,
-    color: COLORS.muted,
-  },
+  timelineDate: { fontSize: 14, color: COLORS.text, marginBottom: 4 },
+  timelineTime: { fontSize: 14, color: COLORS.muted },
   timelineLine: {
     width: 2,
     height: 24,
@@ -496,10 +461,8 @@ const styles = StyleSheet.create({
     padding: 48,
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 3,
+    borderColor: COLORS.cardSelectedStrong,
   },
-  photoPlaceholderText: {
-    fontSize: 14,
-    color: COLORS.muted,
-    marginTop: 12,
-  },
+  photoPlaceholderText: { fontSize: 14, color: COLORS.muted, marginTop: 12 },
 });

@@ -35,8 +35,13 @@ module.exports = {
       resizeMode: "contain",
     },
     extra: {
-      supabaseUrl: process.env.SUPABASE_URL,
-      supabaseKey: process.env.SUPABASE_KEY,
+      supabaseUrl:
+        process.env.EXPO_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL,
+      supabaseKey:
+        process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_KEY,
+      eas: {
+        projectId: "your-project-id", // Optional, for EAS builds
+      },
     },
   },
 };
