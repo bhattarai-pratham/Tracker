@@ -1,5 +1,9 @@
+import { decode as decodeBase64 } from "base64-arraybuffer";
+import * as FileSystem from "expo-file-system/legacy";
 import { Trip } from "../data/tripdata";
 import { supabase } from "./supabase";
+
+const TRIP_PHOTO_BUCKET = "trips_photos";
 
 export const tripService = {
   async getAllTrips(): Promise<{ data: Trip[] | null; error: any }> {
@@ -85,5 +89,105 @@ export const tripService = {
 
     console.log("Active trip check:", { data, error });
     return { data, error };
+  },
+
+  async uploadTripPhoto(params: {
+    tripId: string;
+    phase: "start" | "end";
+    fileUri: string;
+  }): Promise<{ data: any; error: any; path?: string }> {
+    const { tripId, phase, fileUri } = params;
+    console.log("Uploading trip photo", { tripId, phase, fileUri });
+
+    const fileExtensionMatch = fileUri.match(/\.([a-zA-Z0-9]+)(?:\?|$)/);
+    const extension = fileExtensionMatch?.[1]?.toLowerCase() ?? "jpg";
+    const contentType = extension === "png" ? "image/png" : "image/jpeg";
+    const filePath = `${phase}/${tripId}_${Date.now()}.${extension}`;
+
+    try {
+      const base64 = await FileSystem.readAsStringAsync(fileUri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+
+      const arrayBuffer = decodeBase64(base64);
+
+      const { data, error } = await supabase.storage
+        .from(TRIP_PHOTO_BUCKET)
+        .upload(filePath, arrayBuffer, {
+          cacheControl: "3600",
+          upsert: false,
+          contentType,
+        });
+
+      if (error) {
+        console.error("Supabase photo upload error", error);
+      }
+
+      return { data, error, path: data?.path ?? filePath };
+    } catch (error) {
+      console.error("Unexpected photo upload error", error);
+      return { data: null, error };
+    }
+  },
+
+  async getTripPhotoUrls(tripId: string): Promise<{
+    data: { startPhotoUrl: string | null; endPhotoUrl: string | null };
+    error: any;
+  }> {
+    const fetchPhotoForPhase = async (phase: "start" | "end") => {
+      try {
+        const { data: files, error: listError } = await supabase.storage
+          .from(TRIP_PHOTO_BUCKET)
+          .list(phase, {
+            limit: 50,
+            search: `${tripId}_`,
+            sortBy: { column: "name", order: "desc" },
+          });
+
+        if (listError) {
+          return { url: null, error: listError };
+        }
+
+        const match = files?.find((file) => file.name.startsWith(`${tripId}_`));
+
+        if (!match) {
+          return { url: null, error: null };
+        }
+
+        const objectPath = `${phase}/${match.name}`;
+        const { data: signedData, error: signedError } = await supabase.storage
+          .from(TRIP_PHOTO_BUCKET)
+          .createSignedUrl(objectPath, 60 * 60); // 1 hour
+
+        if (!signedError && signedData?.signedUrl) {
+          return { url: signedData.signedUrl, error: null };
+        }
+
+        const { data: publicData } = supabase.storage
+          .from(TRIP_PHOTO_BUCKET)
+          .getPublicUrl(objectPath);
+
+        return {
+          url: publicData?.publicUrl ?? null,
+          error: signedError,
+        };
+      } catch (error) {
+        console.error("Failed to load trip photo", { phase, error });
+        return { url: null, error };
+      }
+    };
+
+    const [startResult, endResult] = await Promise.all([
+      fetchPhotoForPhase("start"),
+      fetchPhotoForPhase("end"),
+    ]);
+
+    return {
+      data: {
+        startPhotoUrl: startResult.url,
+        endPhotoUrl: endResult.url,
+      },
+      error: startResult.error || endResult.error || null,
+    };
   },
 };

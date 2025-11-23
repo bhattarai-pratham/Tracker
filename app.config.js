@@ -10,11 +10,16 @@ module.exports = {
     ios: {
       supportsTablet: true,
       bundleIdentifier: "com.anonymous.trackerv2",
+      infoPlist: {
+        NSCameraUsageDescription:
+          "Trip Tracker needs access to your camera to capture trip photos.",
+      },
     },
     android: {
       edgeToEdgeEnabled: true,
       predictiveBackGestureEnabled: false,
       package: "com.anonymous.trackerv2",
+      permissions: ["CAMERA"],
       adaptiveIcon: {
         foregroundImage: "./src/assets/images/logo.png",
         backgroundColor: "#ffffff",

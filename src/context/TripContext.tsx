@@ -32,6 +32,11 @@ interface TripContextType {
 
   isSaving: boolean;
 
+  startTripPhotoUri: string | null;
+  setStartTripPhotoUri: (uri: string | null) => void;
+  endTripPhotoUri: string | null;
+  setEndTripPhotoUri: (uri: string | null) => void;
+
   // Storage functions
   saveToStorage: () => Promise<void>;
   clearStorage: () => Promise<void>;
@@ -62,6 +67,10 @@ export function TripProvider({ children }: { children: ReactNode }) {
   const [earnings, setEarnings] = useState<string | undefined>(undefined);
   const [isInitialized, setIsInitialized] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [startTripPhotoUri, setStartTripPhotoUri] = useState<string | null>(
+    null
+  );
+  const [endTripPhotoUri, setEndTripPhotoUri] = useState<string | null>(null);
 
   // Initialize from storage on app launch
   useEffect(() => {
@@ -216,6 +225,8 @@ export function TripProvider({ children }: { children: ReactNode }) {
       setEndingOdometer(undefined);
       setEndTimestamp(null);
       setEarnings(undefined);
+      setStartTripPhotoUri(null);
+      setEndTripPhotoUri(null);
       console.log("Trip state cleared successfully");
     } catch (error) {
       console.error("Error clearing storage:", error);
@@ -240,6 +251,10 @@ export function TripProvider({ children }: { children: ReactNode }) {
         earnings,
         setEarnings,
         isSaving,
+        startTripPhotoUri,
+        setStartTripPhotoUri,
+        endTripPhotoUri,
+        setEndTripPhotoUri,
         saveToStorage,
         clearStorage,
         initializeFromStorage,

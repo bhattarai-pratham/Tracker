@@ -3,10 +3,13 @@ import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Image,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
 } from "react-native";
 import COLORS from "../../assets/colors";
@@ -18,6 +21,16 @@ const TripDetail = () => {
   const [trip, setTrip] = useState<Trip | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [photoUrls, setPhotoUrls] = useState<{
+    start: string | null;
+    end: string | null;
+  }>({ start: null, end: null });
+  const [photosLoading, setPhotosLoading] = useState(false);
+  const [photosError, setPhotosError] = useState<string | null>(null);
+  const [activePhoto, setActivePhoto] = useState<{
+    label: string;
+    uri: string;
+  } | null>(null);
 
   useEffect(() => {
     const fetchTrip = async () => {
@@ -46,6 +59,38 @@ const TripDetail = () => {
     };
 
     fetchTrip();
+  }, [tripID]);
+
+  useEffect(() => {
+    if (!tripID) return;
+    let isMounted = true;
+
+    const fetchPhotos = async () => {
+      setPhotosLoading(true);
+      try {
+        const { data, error } = await tripService.getTripPhotoUrls(tripID);
+        if (!isMounted) return;
+
+        setPhotoUrls({
+          start: data?.startPhotoUrl ?? null,
+          end: data?.endPhotoUrl ?? null,
+        });
+        setPhotosError(error ? "Unable to load photos" : null);
+      } catch (err) {
+        if (!isMounted) return;
+        setPhotosError("Unable to load photos");
+      } finally {
+        if (isMounted) {
+          setPhotosLoading(false);
+        }
+      }
+    };
+
+    fetchPhotos();
+
+    return () => {
+      isMounted = false;
+    };
   }, [tripID]);
 
   const calculateDistance = (start: string, end: string) =>
@@ -140,6 +185,45 @@ const TripDetail = () => {
 
   const startDateTime = formatDateTime(trip.start_timestamp);
   const endDateTime = isTripActive ? null : formatDateTime(trip.end_timestamp!);
+
+  const handlePhotoPress = (label: string, uri: string | null) => {
+    if (!uri || photosLoading) return;
+    setActivePhoto({ label, uri });
+  };
+
+  const closePhotoModal = () => setActivePhoto(null);
+
+  const renderPhotoCard = (label: string, uri: string | null) => (
+    <View style={styles.photoCard}>
+      <Text style={styles.photoLabel}>{label}</Text>
+      {photosLoading ? (
+        <View style={styles.photoLoader}>
+          <ActivityIndicator color={COLORS.primary} />
+        </View>
+      ) : uri ? (
+        <TouchableOpacity
+          activeOpacity={0.92}
+          onPress={() => handlePhotoPress(label, uri)}
+          style={styles.photoTapArea}
+        >
+          <Image
+            source={{ uri }}
+            style={styles.photoImage}
+            resizeMode="cover"
+          />
+          <View style={styles.photoHintBadge}>
+            <Ionicons name="expand-outline" size={14} color={COLORS.primary} />
+            <Text style={styles.photoHintText}>Tap to enlarge</Text>
+          </View>
+        </TouchableOpacity>
+      ) : (
+        <View style={styles.photoEmpty}>
+          <Ionicons name="image-outline" size={28} color={COLORS.muted} />
+          <Text style={styles.photoPlaceholderText}>No photo yet</Text>
+        </View>
+      )}
+    </View>
+  );
 
   return (
     <View style={styles.container}>
@@ -290,15 +374,46 @@ const TripDetail = () => {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Photos</Text>
-          <View style={styles.photoPlaceholder}>
-            <Ionicons name="images-outline" size={48} color={COLORS.muted} />
-            <Text style={styles.photoPlaceholderText}>No photos yet</Text>
+          <View style={styles.photoSectionHeader}>
+            <Text style={styles.sectionTitle}>Photos</Text>
+            {photosLoading ? (
+              <ActivityIndicator size="small" color={COLORS.primary} />
+            ) : null}
+          </View>
+          {photosError ? (
+            <Text style={styles.photoErrorText}>{photosError}</Text>
+          ) : null}
+          <View style={styles.photoGrid}>
+            {renderPhotoCard("Start Photo", photoUrls.start)}
+            {renderPhotoCard("End Photo", photoUrls.end)}
           </View>
         </View>
 
         <View style={{ height: 100 }} />
       </ScrollView>
+
+      <Modal
+        visible={!!activePhoto}
+        transparent
+        animationType="fade"
+        onRequestClose={closePhotoModal}
+      >
+        <TouchableWithoutFeedback onPress={closePhotoModal}>
+          <View style={styles.modalBackdrop}>
+            {activePhoto && (
+              <View style={styles.modalContent}>
+                <Image
+                  source={{ uri: activePhoto.uri }}
+                  style={styles.modalImage}
+                  resizeMode="contain"
+                />
+                <Text style={styles.modalLabel}>{activePhoto.label}</Text>
+                <Text style={styles.modalHint}>Tap anywhere to dismiss</Text>
+              </View>
+            )}
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
     </View>
   );
 };
@@ -455,14 +570,110 @@ const styles = StyleSheet.create({
     marginLeft: 11,
     marginVertical: 8,
   },
-  photoPlaceholder: {
-    backgroundColor: COLORS.card,
-    borderRadius: 12,
-    padding: 48,
+  photoPlaceholderText: { fontSize: 14, color: COLORS.muted, marginTop: 12 },
+  photoSectionHeader: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "space-between",
+  },
+  photoGrid: {
+    flexDirection: "row",
+    gap: 16,
+    marginTop: 12,
+  },
+  photoCard: {
+    flex: 1,
+    backgroundColor: COLORS.card,
+    borderRadius: 16,
+    padding: 16,
     borderWidth: 3,
     borderColor: COLORS.cardSelectedStrong,
+    shadowColor: COLORS.primaryLight,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  photoPlaceholderText: { fontSize: 14, color: COLORS.muted, marginTop: 12 },
+  photoLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: COLORS.muted,
+    marginBottom: 12,
+  },
+  photoTapArea: {
+    position: "relative",
+  },
+  photoImage: {
+    width: "100%",
+    height: 180,
+    borderRadius: 12,
+  },
+  photoEmpty: {
+    height: 180,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: COLORS.cardSelectedStrong,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: COLORS.cardSelected,
+  },
+  photoLoader: {
+    height: 180,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: COLORS.cardSelectedStrong,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: COLORS.card,
+  },
+  photoErrorText: {
+    color: COLORS.danger,
+    fontSize: 13,
+    marginTop: 8,
+  },
+  photoHintBadge: {
+    position: "absolute",
+    right: 10,
+    bottom: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(255,255,255,0.92)",
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  photoHintText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: COLORS.primary,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(2, 6, 23, 0.9)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  modalContent: {
+    width: "100%",
+    alignItems: "center",
+  },
+  modalImage: {
+    width: "100%",
+    height: 420,
+    borderRadius: 16,
+    marginBottom: 16,
+    backgroundColor: "#000",
+  },
+  modalLabel: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#fff",
+    marginBottom: 4,
+  },
+  modalHint: {
+    fontSize: 14,
+    color: "rgba(255,255,255,0.7)",
+  },
 });

@@ -2,19 +2,23 @@
   "expo": {
     "name": "Tracker",
     "slug": "tracker-v2",
-    "version": "1.0.2",
+    "version": "1.1.0",
     "orientation": "portrait",
     "scheme": "trackerv2",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.trackerv2"
+      "bundleIdentifier": "com.anonymous.trackerv2",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Trip Tracker needs access to your camera to capture trip photos."
+      }
     },
     "android": {
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "com.anonymous.trackerv2",
+      "permissions": ["CAMERA"],
       "adaptiveIcon": {
         "foregroundImage": "./src/assets/images/logo.png",
         "backgroundColor": "#ffffff"

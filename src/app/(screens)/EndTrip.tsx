@@ -12,12 +12,12 @@ import {
 } from "react-native";
 import COLORS from "../../assets/colors";
 import AppButton from "../../components/AppButton";
+import TripPhotoCapture from "../../components/TripPhotoCapture";
 import { useTripContext } from "../../context/TripContext";
 import { tripService } from "../../functions/tripService";
 
 const EndTrip = () => {
   const {
-    setIsTripActive,
     is_trip_active,
     tripId,
     startingOdometer,
@@ -27,9 +27,74 @@ const EndTrip = () => {
     earnings,
     setEarnings,
     clearStorage,
+    endTripPhotoUri,
+    setEndTripPhotoUri,
   } = useTripContext();
 
   const [isLoading, setIsLoading] = useState(false);
+
+  const attemptPhotoUpload = async (): Promise<boolean> => {
+    if (!tripId || !endTripPhotoUri) {
+      return false;
+    }
+
+    try {
+      const { error } = await tripService.uploadTripPhoto({
+        tripId,
+        phase: "end",
+        fileUri: endTripPhotoUri,
+      });
+
+      if (!error) {
+        return true;
+      }
+
+      console.error("End photo upload error", error);
+    } catch (uploadError) {
+      console.error("Unexpected end photo upload error", uploadError);
+    }
+
+    return await new Promise((resolve) => {
+      Alert.alert(
+        "Upload Failed",
+        "We couldn't upload your end photo. Check your connection and try again.",
+        [
+          {
+            text: "Cancel",
+            style: "cancel",
+            onPress: () => resolve(false),
+          },
+          {
+            text: "Retry",
+            onPress: async () => {
+              const success = await attemptPhotoUpload();
+              resolve(success);
+            },
+          },
+        ]
+      );
+    });
+  };
+
+  const hasValidEndingOdometer =
+    typeof endingOdometer === "string" &&
+    endingOdometer.trim().length > 0 &&
+    !isNaN(Number(endingOdometer));
+
+  const endingGreaterThanStart =
+    hasValidEndingOdometer &&
+    startingOdometer &&
+    !isNaN(Number(startingOdometer))
+      ? Number(endingOdometer) > Number(startingOdometer)
+      : true;
+
+  const isEndDisabled =
+    isLoading ||
+    !is_trip_active ||
+    !tripId ||
+    !hasValidEndingOdometer ||
+    !endingGreaterThanStart ||
+    !endTripPhotoUri;
 
   const handleTripStatusChange = async () => {
     if (!endingOdometer || isNaN(Number(endingOdometer))) {
@@ -59,10 +124,24 @@ const EndTrip = () => {
       return;
     }
 
+    if (!endTripPhotoUri) {
+      Alert.alert(
+        "Photo Required",
+        "Please capture an end-of-trip photo before ending your trip."
+      );
+      return;
+    }
+
     setIsLoading(true);
 
     try {
       const newEndTimestamp = new Date();
+
+      const photoUploaded = await attemptPhotoUpload();
+      if (!photoUploaded) {
+        setIsLoading(false);
+        return;
+      }
 
       // Update trip in Supabase
       const { data, error } = await tripService.updateTripEnd(tripId, {
@@ -87,6 +166,8 @@ const EndTrip = () => {
 
       // Clear storage and reset state
       await clearStorage();
+
+      setEndTripPhotoUri(null);
 
       setIsLoading(false);
 
@@ -117,10 +198,6 @@ const EndTrip = () => {
       Alert.alert("Error", "An unexpected error occurred. Please try again.");
       setIsLoading(false);
     }
-  };
-
-  const handleTakePicture = () => {
-    Alert.alert("Camera", "Take picture button pressed");
   };
 
   return (
@@ -158,15 +235,13 @@ const EndTrip = () => {
             {new Date().toLocaleString()}
           </Text>
 
-          <AppButton
-            onPress={handleTakePicture}
-            size="md"
-            variant="outline"
-            shape="rounded"
-            style={styles.pictureButton}
-          >
-            Take Picture
-          </AppButton>
+          <TripPhotoCapture
+            phase="end"
+            photoUri={endTripPhotoUri}
+            onPhotoCaptured={setEndTripPhotoUri}
+            buttonDisabled={isLoading}
+            helperText="Grab a quick end-of-trip photo before finishing."
+          />
 
           <AppButton
             onPress={handleTripStatusChange}
@@ -174,7 +249,7 @@ const EndTrip = () => {
             variant="danger"
             shape="rounded"
             style={styles.endButton}
-            disabled={isLoading}
+            disabled={isEndDisabled}
           >
             {isLoading ? <ActivityIndicator color="#fff" /> : "End Trip"}
           </AppButton>

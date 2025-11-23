@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import COLORS from "../../assets/colors";
 import AppButton from "../../components/AppButton";
+import TripPhotoCapture from "../../components/TripPhotoCapture";
 import { useTripContext } from "../../context/TripContext";
 import { generateTripId } from "../../functions/Helpers";
 import { tripService } from "../../functions/tripService";
@@ -25,6 +26,8 @@ const StartTrip = () => {
     setTripId,
     setStartingOdometer,
     isSaving,
+    startTripPhotoUri,
+    setStartTripPhotoUri,
   } = useTripContext();
 
   const [isLoading, setIsLoading] = useState(false);
@@ -48,6 +51,7 @@ const StartTrip = () => {
         pendingTripData;
       setPendingTripData(null);
       setIsLoading(false);
+      setStartTripPhotoUri(null);
 
       Alert.alert(
         "Trip Started",
@@ -72,7 +76,7 @@ const StartTrip = () => {
         ]
       );
     }
-  }, [isSaving, pendingTripData]);
+  }, [isSaving, pendingTripData, isLoading, setStartTripPhotoUri]);
 
   // Safety timeout - prevent infinite loading
   useEffect(() => {
@@ -84,6 +88,7 @@ const StartTrip = () => {
 
         setIsLoading(false);
         setPendingTripData(null);
+        setStartTripPhotoUri(null);
 
         Alert.alert(
           "Trip Started",
@@ -111,7 +116,62 @@ const StartTrip = () => {
 
       return () => clearTimeout(timeout);
     }
-  }, [isLoading, pendingTripData]);
+  }, [isLoading, pendingTripData, setStartTripPhotoUri]);
+
+  const attemptPhotoUpload = async (tripId: string): Promise<boolean> => {
+    if (!startTripPhotoUri) {
+      return false;
+    }
+
+    try {
+      const { error } = await tripService.uploadTripPhoto({
+        tripId,
+        phase: "start",
+        fileUri: startTripPhotoUri,
+      });
+
+      if (!error) {
+        return true;
+      }
+
+      console.error("Start photo upload error", error);
+    } catch (uploadError) {
+      console.error("Unexpected upload error", uploadError);
+    }
+
+    return await new Promise((resolve) => {
+      Alert.alert(
+        "Upload Failed",
+        "We couldn't upload your start photo. Check your connection and try again.",
+        [
+          {
+            text: "Cancel",
+            style: "cancel",
+            onPress: () => resolve(false),
+          },
+          {
+            text: "Retry",
+            onPress: async () => {
+              const success = await attemptPhotoUpload(tripId);
+              resolve(success);
+            },
+          },
+        ]
+      );
+    });
+  };
+
+  const hasValidOdometer =
+    typeof startingOdometer === "string" &&
+    startingOdometer.trim().length > 0 &&
+    !isNaN(Number(startingOdometer));
+
+  const isStartDisabled =
+    isLoading ||
+    isSaving ||
+    is_trip_active ||
+    !hasValidOdometer ||
+    !startTripPhotoUri;
 
   const handleTripStatusChange = async () => {
     if (!startingOdometer || isNaN(Number(startingOdometer))) {
@@ -122,6 +182,13 @@ const StartTrip = () => {
       Alert.alert("Trip Already Active", "You have already started a trip.");
       return;
     }
+    if (!startTripPhotoUri) {
+      Alert.alert(
+        "Photo Required",
+        "Please capture a start photo before starting your trip."
+      );
+      return;
+    }
 
     setIsLoading(true);
 
@@ -129,8 +196,14 @@ const StartTrip = () => {
       const newTripID = generateTripId();
       const newStartTimestamp = new Date();
 
+      const photoUploaded = await attemptPhotoUpload(newTripID);
+      if (!photoUploaded) {
+        setIsLoading(false);
+        return;
+      }
+
       // Create trip in Supabase
-      const { data, error } = await tripService.createTrip({
+      const { error } = await tripService.createTrip({
         id: newTripID,
         starting_odometer: startingOdometer,
         start_timestamp: newStartTimestamp.toISOString(),
@@ -167,10 +240,6 @@ const StartTrip = () => {
     }
   };
 
-  const handleTakePicture = () => {
-    Alert.alert("Camera", "Take picture button pressed");
-  };
-
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -192,15 +261,13 @@ const StartTrip = () => {
             onChangeText={setStartingOdometer}
           />
 
-          <AppButton
-            onPress={handleTakePicture}
-            size="md"
-            variant="outline"
-            shape="rounded"
-            style={styles.pictureButton}
-          >
-            Take Picture
-          </AppButton>
+          <TripPhotoCapture
+            phase="start"
+            photoUri={startTripPhotoUri}
+            onPhotoCaptured={setStartTripPhotoUri}
+            buttonDisabled={isLoading || isSaving}
+            helperText="Take a quick photo of your vehicle before starting."
+          />
 
           <AppButton
             onPress={handleTripStatusChange}
@@ -208,7 +275,7 @@ const StartTrip = () => {
             variant="primary"
             shape="rounded"
             style={styles.startButton}
-            disabled={isLoading || isSaving}
+            disabled={isStartDisabled}
           >
             {isLoading || isSaving ? (
               <ActivityIndicator color="#fff" />
