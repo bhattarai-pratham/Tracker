@@ -2,7 +2,7 @@ module.exports = {
   expo: {
     name: "Tracker",
     slug: "tracker-v2",
-    version: "1.0.1",
+    version: "1.2.0",
     orientation: "portrait",
     scheme: "trackerv2",
     userInterfaceStyle: "automatic",
