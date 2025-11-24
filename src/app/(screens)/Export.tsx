@@ -1,9 +1,13 @@
 import { Ionicons } from "@expo/vector-icons";
+import DateTimePicker, {
+  DateTimePickerEvent,
+} from "@react-native-community/datetimepicker";
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,23 +19,97 @@ import AppButton from "../../components/AppButton";
 import { Trip } from "../../data/tripdata";
 import {
   ExportOptions,
-  exportToExcel,
   exportToPDF,
-  shareExcelFile,
   sharePDFFile,
 } from "../../functions/exportService";
 import { tripService } from "../../functions/tripService";
 
+const getDefaultCustomStartDate = (): Date => {
+  const start = new Date();
+  start.setDate(start.getDate() - 7);
+  start.setHours(0, 0, 0, 0);
+  return start;
+};
+
+const getDefaultCustomEndDate = (): Date => {
+  const end = new Date();
+  end.setHours(23, 59, 59, 999);
+  return end;
+};
+
+const formatCustomDisplayDate = (date: Date | null): string => {
+  if (!date) return "Select Date";
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+};
+
 const Export = () => {
-  const [selectedFormat, setSelectedFormat] = useState<string | null>(null);
   const [selectedDateRange, setSelectedDateRange] = useState<string | null>(
     null
   );
+  const [customStartDate, setCustomStartDate] = useState<Date | null>(null);
+  const [customEndDate, setCustomEndDate] = useState<Date | null>(null);
+  const [showCustomDatePicker, setShowCustomDatePicker] = useState<
+    "start" | "end" | null
+  >(null);
   const [includePhotos, setIncludePhotos] = useState(false);
   const [fetchedTrips, setFetchedTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [sharing, setSharing] = useState(false);
+
+  const isCustomRangeComplete = Boolean(customStartDate && customEndDate);
+
+  const getCustomRangeWarning = () => {
+    if (selectedDateRange !== "custom") return null;
+    if (!customStartDate || !customEndDate) {
+      return "Please choose both start and end dates.";
+    }
+    if (customStartDate > customEndDate) {
+      return "Start date must be before or equal to end date.";
+    }
+    return null;
+  };
+
+  const customRangeWarningMessage = getCustomRangeWarning();
+
+  const handleCustomDateChange = (
+    event: DateTimePickerEvent,
+    selectedDate?: Date
+  ) => {
+    const field = showCustomDatePicker;
+    if (event.type === "dismissed") {
+      setShowCustomDatePicker(null);
+      return;
+    }
+    if (!selectedDate || !field) {
+      return;
+    }
+
+    if (field === "start") {
+      const adjustedStart = new Date(selectedDate);
+      adjustedStart.setHours(0, 0, 0, 0);
+      setCustomStartDate(adjustedStart);
+      if (customEndDate && adjustedStart > customEndDate) {
+        const sameDayEnd = new Date(adjustedStart);
+        sameDayEnd.setHours(23, 59, 59, 999);
+        setCustomEndDate(sameDayEnd);
+      }
+    }
+
+    if (field === "end") {
+      const adjustedEnd = new Date(selectedDate);
+      adjustedEnd.setHours(23, 59, 59, 999);
+      setCustomEndDate(adjustedEnd);
+    }
+
+    if (Platform.OS !== "ios") {
+      setShowCustomDatePicker(null);
+    }
+  };
 
   useEffect(() => {
     const fetchTrips = async () => {
@@ -48,38 +126,30 @@ const Export = () => {
     fetchTrips();
   }, []);
 
-  const exportFormats = [
-    {
-      id: "pdf",
-      name: "PDF",
-      description: "Portable Document Format",
-      icon: "document",
-      color: COLORS.danger,
-      light: COLORS.dangerLight,
-    },
-    {
-      id: "excel",
-      name: "Excel",
-      description: "Microsoft Excel (.xlsx)",
-      icon: "grid",
-      color: COLORS.accent,
-      light: COLORS.accentLight,
-      disabled: includePhotos,
-    },
-  ];
-
   const exportOptions = [
     {
-      id: "7days",
-      name: "Last 7 Days",
-      description: "Export trips from last 7 days",
+      id: "thisWeek",
+      name: "This Week",
+      description: "Export trips from the start of this week",
       icon: "calendar",
     },
     {
-      id: "30days",
-      name: "Last 30 Days",
-      description: "Export trips from last 30 days",
-      icon: "time",
+      id: "lastWeek",
+      name: "Last Week",
+      description: "Export trips from the previous week",
+      icon: "return-down-forward",
+    },
+    {
+      id: "thisMonth",
+      name: "This Month",
+      description: "Export trips from the start of this month",
+      icon: "calendar-number",
+    },
+    {
+      id: "lastMonth",
+      name: "Last Month",
+      description: "Export trips from the previous month",
+      icon: "calendar-outline",
     },
     {
       id: "custom",
@@ -90,37 +160,30 @@ const Export = () => {
   ];
 
   const handleExport = async () => {
-    if (!selectedFormat) {
-      Alert.alert("Select Format", "Please select an export format");
-      return;
-    }
-
     if (!selectedDateRange) {
       Alert.alert("Select Date Range", "Please select a date range");
       return;
     }
 
     if (selectedDateRange === "custom") {
-      Alert.alert(
-        "Custom Date Range",
-        "Date picker will be implemented in the next update"
-      );
-      return;
+      const warning = getCustomRangeWarning();
+      if (warning) {
+        Alert.alert("Custom Date Range", warning);
+        return;
+      }
     }
 
     setExporting(true);
 
     try {
       const exportOptions: ExportOptions = {
-        format: selectedFormat as "excel" | "pdf",
-        dateRange: selectedDateRange as "7days" | "30days" | "custom",
+        dateRange: selectedDateRange as ExportOptions["dateRange"],
         includePhotos,
+        customStartDate: customStartDate || undefined,
+        customEndDate: customEndDate || undefined,
       };
 
-      const result =
-        selectedFormat === "excel"
-          ? await exportToExcel(fetchedTrips, exportOptions)
-          : await exportToPDF(fetchedTrips, exportOptions);
+      const result = await exportToPDF(fetchedTrips, exportOptions);
 
       Alert.alert(
         result.success ? "Export Successful" : "Export Failed",
@@ -135,37 +198,30 @@ const Export = () => {
   };
 
   const handleShare = async () => {
-    if (!selectedFormat) {
-      Alert.alert("Select Format", "Please select an export format");
-      return;
-    }
-
     if (!selectedDateRange) {
       Alert.alert("Select Date Range", "Please select a date range");
       return;
     }
 
     if (selectedDateRange === "custom") {
-      Alert.alert(
-        "Custom Date Range",
-        "Date picker will be implemented in the next update"
-      );
-      return;
+      const warning = getCustomRangeWarning();
+      if (warning) {
+        Alert.alert("Custom Date Range", warning);
+        return;
+      }
     }
 
     setSharing(true);
 
     try {
       const exportOptions: ExportOptions = {
-        format: selectedFormat as "excel" | "pdf",
-        dateRange: selectedDateRange as "7days" | "30days" | "custom",
+        dateRange: selectedDateRange as ExportOptions["dateRange"],
         includePhotos,
+        customStartDate: customStartDate || undefined,
+        customEndDate: customEndDate || undefined,
       };
 
-      const result =
-        selectedFormat === "excel"
-          ? await shareExcelFile(fetchedTrips, exportOptions)
-          : await sharePDFFile(fetchedTrips, exportOptions);
+      const result = await sharePDFFile(fetchedTrips, exportOptions);
 
       Alert.alert(
         result.success ? "Share Successful" : "Share Failed",
@@ -182,7 +238,16 @@ const Export = () => {
   const handleDateRangeSelect = (rangeId: string) => {
     setSelectedDateRange(rangeId);
     if (rangeId === "custom") {
-      Alert.alert("Custom Date Range", "Date picker will be implemented soon");
+      if (!customStartDate) {
+        setCustomStartDate(getDefaultCustomStartDate());
+      }
+      if (!customEndDate) {
+        setCustomEndDate(getDefaultCustomEndDate());
+      }
+    } else {
+      setCustomStartDate(null);
+      setCustomEndDate(null);
+      setShowCustomDatePicker(null);
     }
   };
 
@@ -246,64 +311,16 @@ const Export = () => {
           <Text style={styles.statsLabel}>Total Trips Available</Text>
         </View>
 
-        {/* Export Format Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Select Format</Text>
-          <View style={styles.formatGrid}>
-            {exportFormats.map((format) => (
-              <TouchableOpacity
-                key={format.id}
-                style={[
-                  styles.formatCard,
-                  selectedFormat === format.id && styles.formatCardSelected,
-                  format.disabled && styles.formatCardDisabled,
-                ]}
-                onPress={() => !format.disabled && setSelectedFormat(format.id)}
-                activeOpacity={0.7}
-                disabled={format.disabled}
-              >
-                <View
-                  style={[styles.formatIcon, { backgroundColor: format.light }]}
-                >
-                  <Ionicons
-                    name={format.icon as any}
-                    size={28}
-                    color={format.disabled ? COLORS.muted : format.color}
-                  />
-                </View>
-                <Text
-                  style={[
-                    styles.formatName,
-                    format.disabled && styles.formatTextDisabled,
-                  ]}
-                >
-                  {format.name}
-                </Text>
-                <Text
-                  style={[
-                    styles.formatDescription,
-                    format.disabled && styles.formatTextDisabled,
-                  ]}
-                >
-                  {format.description}
-                </Text>
-                {format.disabled && (
-                  <Text style={styles.disabledLabel}>
-                    Not available with photos
-                  </Text>
-                )}
-                {selectedFormat === format.id && (
-                  <View style={styles.checkmark}>
-                    <Ionicons
-                      name="checkmark-circle"
-                      size={24}
-                      color={COLORS.primary}
-                    />
-                  </View>
-                )}
-              </TouchableOpacity>
-            ))}
-          </View>
+        {/* Export Format Note */}
+        <View style={styles.infoBox}>
+          <Ionicons
+            name="information-circle-outline"
+            size={20}
+            color={COLORS.primary}
+          />
+          <Text style={styles.infoText}>
+            Exported documents will always be in PDF format.
+          </Text>
         </View>
 
         {/* Export Options Section */}
@@ -346,34 +363,107 @@ const Export = () => {
               )}
             </TouchableOpacity>
           ))}
+          {selectedDateRange === "custom" && (
+            <View style={styles.customRangeContainer}>
+              <Text style={styles.customRangeLabel}>Custom range</Text>
+              <View style={styles.customDateRow}>
+                <TouchableOpacity
+                  style={styles.customDateButton}
+                  onPress={() => setShowCustomDatePicker("start")}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.customDateTitle}>Start Date</Text>
+                  <Text style={styles.customDateValue}>
+                    {formatCustomDisplayDate(customStartDate)}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.customDateButton}
+                  onPress={() => setShowCustomDatePicker("end")}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.customDateTitle}>End Date</Text>
+                  <Text style={styles.customDateValue}>
+                    {formatCustomDisplayDate(customEndDate)}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.customRangeSummaryRow}>
+                <Text style={styles.customRangeSummaryText}>
+                  {isCustomRangeComplete
+                    ? `${formatCustomDisplayDate(
+                        customStartDate
+                      )} - ${formatCustomDisplayDate(customEndDate)}`
+                    : "Choose both dates to see the range."}
+                </Text>
+                {customRangeWarningMessage && (
+                  <Text style={styles.customRangeWarningText}>
+                    {customRangeWarningMessage}
+                  </Text>
+                )}
+              </View>
+            </View>
+          )}
         </View>
 
-        {/* Additional Options */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Additional Settings</Text>
-          <View style={styles.settingsCard}>
-            <TouchableOpacity
-              style={styles.settingRow}
-              onPress={() => setIncludePhotos(!includePhotos)}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="image-outline" size={20} color={COLORS.muted} />
-              <Text style={styles.settingText}>Include trip photos</Text>
-              <View style={styles.toggle}>
-                <Ionicons
-                  name={includePhotos ? "checkmark-circle" : "ellipse-outline"}
-                  size={24}
-                  color={includePhotos ? COLORS.success : COLORS.muted}
-                />
-              </View>
-            </TouchableOpacity>
-            {includePhotos && (
-              <Text style={styles.photoWarning}>
-                Note: Excel export is not available when photos are included
+        {showCustomDatePicker &&
+          (Platform.OS === "ios" ? (
+            <View style={styles.inlineDatePickerWrapper}>
+              <Text style={styles.inlineDatePickerTitle}>
+                Select {showCustomDatePicker === "start" ? "start" : "end"} date
               </Text>
-            )}
-          </View>
-        </View>
+              <DateTimePicker
+                value={
+                  showCustomDatePicker === "start"
+                    ? customStartDate || new Date()
+                    : customEndDate || new Date()
+                }
+                mode="date"
+                display="spinner"
+                maximumDate={
+                  showCustomDatePicker === "start"
+                    ? customEndDate || new Date()
+                    : new Date()
+                }
+                minimumDate={
+                  showCustomDatePicker === "end"
+                    ? customStartDate || undefined
+                    : undefined
+                }
+                onChange={handleCustomDateChange}
+              />
+              <View style={styles.inlineDatePickerActions}>
+                <TouchableOpacity
+                  style={styles.inlineDatePickerButton}
+                  onPress={() => setShowCustomDatePicker(null)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.inlineDatePickerButtonText}>Done</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <DateTimePicker
+              value={
+                showCustomDatePicker === "start"
+                  ? customStartDate || new Date()
+                  : customEndDate || new Date()
+              }
+              mode="date"
+              display="default"
+              maximumDate={
+                showCustomDatePicker === "start"
+                  ? customEndDate || new Date()
+                  : new Date()
+              }
+              minimumDate={
+                showCustomDatePicker === "end"
+                  ? customStartDate || undefined
+                  : undefined
+              }
+              onChange={handleCustomDateChange}
+            />
+          ))}
 
         {/* Action Buttons */}
         <View style={styles.actionButtons}>
@@ -522,66 +612,24 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     marginBottom: 12,
   },
-  formatGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-  },
-  formatCard: {
-    width: "48%",
+  formatNotice: {
     backgroundColor: "#fff",
     borderRadius: 12,
     padding: 16,
+    flexDirection: "row",
     alignItems: "center",
-    borderWidth: 2,
-    borderColor: "transparent",
+    gap: 10,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
-  formatCardSelected: {
-    borderColor: COLORS.primary,
-    backgroundColor: COLORS.primaryLight,
-  },
-  formatCardDisabled: {
-    opacity: 0.5,
-    backgroundColor: COLORS.card,
-  },
-  formatTextDisabled: {
-    color: COLORS.muted,
-  },
-  disabledLabel: {
-    fontSize: 10,
-    color: COLORS.danger,
-    marginTop: 4,
-    textAlign: "center",
-  },
-  formatIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 12,
-  },
-  formatName: {
-    fontSize: 16,
-    fontWeight: "600",
+  formatNoticeText: {
+    flex: 1,
     color: COLORS.text,
-    marginBottom: 4,
-  },
-  formatDescription: {
-    fontSize: 11,
-    color: COLORS.muted,
-    textAlign: "center",
-    lineHeight: 16,
-  },
-  checkmark: {
-    position: "absolute",
-    top: 8,
-    right: 8,
+    fontSize: 14,
+    lineHeight: 20,
   },
   optionCard: {
     flexDirection: "row",
@@ -672,6 +720,7 @@ const styles = StyleSheet.create({
     gap: 12,
     backgroundColor: COLORS.primaryLight,
     borderRadius: 12,
+    marginBottom: 18,
     padding: 16,
     borderLeftWidth: 4,
     borderLeftColor: COLORS.primary,
@@ -681,5 +730,87 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: COLORS.text,
     lineHeight: 18,
+  },
+  customRangeContainer: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  customRangeLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: COLORS.text,
+    marginBottom: 12,
+  },
+  customDateRow: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  customDateButton: {
+    flex: 1,
+    backgroundColor: COLORS.card,
+    borderRadius: 10,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: COLORS.background,
+  },
+  customDateTitle: {
+    fontSize: 12,
+    color: COLORS.muted,
+    marginBottom: 4,
+  },
+  customDateValue: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: COLORS.text,
+  },
+  customRangeSummaryRow: {
+    marginTop: 12,
+  },
+  customRangeSummaryText: {
+    fontSize: 14,
+    color: COLORS.muted,
+  },
+  customRangeWarningText: {
+    marginTop: 4,
+    fontSize: 12,
+    color: COLORS.danger,
+  },
+  inlineDatePickerWrapper: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    marginBottom: 16,
+    padding: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  inlineDatePickerTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    marginBottom: 12,
+    color: COLORS.text,
+  },
+  inlineDatePickerActions: {
+    marginTop: 12,
+    alignItems: "flex-end",
+  },
+  inlineDatePickerButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: 8,
+    backgroundColor: COLORS.primary,
+  },
+  inlineDatePickerButtonText: {
+    color: "#fff",
+    fontWeight: "600",
   },
 });

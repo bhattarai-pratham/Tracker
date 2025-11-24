@@ -1,16 +1,54 @@
 import { File, Paths } from "expo-file-system";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
-import * as XLSX from "xlsx";
 import { Trip } from "../data/tripdata";
 
 export interface ExportOptions {
-  format: "excel" | "pdf";
-  dateRange: "7days" | "30days" | "custom";
+  dateRange: "thisWeek" | "lastWeek" | "thisMonth" | "lastMonth" | "custom";
   customStartDate?: Date;
   customEndDate?: Date;
   includePhotos?: boolean;
 }
+
+const toStartOfDay = (date: Date): Date => {
+  const value = new Date(date);
+  value.setHours(0, 0, 0, 0);
+  return value;
+};
+
+const toEndOfDay = (date: Date): Date => {
+  const value = new Date(date);
+  value.setHours(23, 59, 59, 999);
+  return value;
+};
+
+const toStartOfWeek = (date: Date, offsetWeeks = 0): Date => {
+  const value = new Date(date);
+  value.setHours(0, 0, 0, 0);
+  const day = value.getDay();
+  value.setDate(value.getDate() - day + offsetWeeks * 7);
+  return value;
+};
+
+const toEndOfWeek = (date: Date, offsetWeeks = 0): Date => {
+  const start = toStartOfWeek(date, offsetWeeks);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  end.setHours(23, 59, 59, 999);
+  return end;
+};
+
+const toStartOfMonth = (date: Date, offsetMonths = 0): Date => {
+  const value = new Date(date.getFullYear(), date.getMonth() + offsetMonths, 1);
+  value.setHours(0, 0, 0, 0);
+  return value;
+};
+
+const toEndOfMonth = (date: Date): Date => {
+  const value = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+  value.setHours(23, 59, 59, 999);
+  return value;
+};
 
 export interface FormattedTrip {
   id: string;
@@ -44,22 +82,35 @@ export const filterTripsByDateRange = (
 ): Trip[] => {
   const now = new Date();
   let startDate: Date;
+  let endDate: Date = now;
 
   switch (options.dateRange) {
-    case "7days":
-      startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    case "thisWeek":
+      startDate = toStartOfWeek(now);
+      endDate = now;
       break;
-    case "30days":
-      startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    case "lastWeek":
+      startDate = toStartOfWeek(now, -1);
+      endDate = toEndOfWeek(now, -1);
+      break;
+    case "thisMonth":
+      startDate = toStartOfMonth(now);
+      endDate = now;
+      break;
+    case "lastMonth":
+      startDate = toStartOfMonth(now, -1);
+      endDate = toEndOfMonth(startDate);
       break;
     case "custom":
-      startDate = options.customStartDate || now;
+      startDate = options.customStartDate
+        ? toStartOfDay(options.customStartDate)
+        : toStartOfDay(now);
+      endDate = options.customEndDate ? toEndOfDay(options.customEndDate) : now;
       break;
     default:
-      startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      startDate = toStartOfWeek(now);
+      endDate = now;
   }
-
-  const endDate = options.customEndDate || now;
 
   return trips.filter((trip) => {
     const tripDate = new Date(trip.start_timestamp);
@@ -164,17 +215,30 @@ export const calculateSummary = (
 
   let dateRangeLabel = "";
   switch (options.dateRange) {
-    case "7days":
-      dateRangeLabel = "Last 7 Days";
+    case "thisWeek":
+      dateRangeLabel = "This Week";
       break;
-    case "30days":
-      dateRangeLabel = "Last 30 Days";
+    case "lastWeek":
+      dateRangeLabel = "Last Week";
       break;
-    case "custom":
-      dateRangeLabel = `${formatDate(
-        options.customStartDate?.toISOString() || ""
-      )} - ${formatDate(options.customEndDate?.toISOString() || "")}`;
+    case "thisMonth":
+      dateRangeLabel = "This Month";
       break;
+    case "lastMonth":
+      dateRangeLabel = "Last Month";
+      break;
+    case "custom": {
+      const startLabel = options.customStartDate
+        ? formatDate(options.customStartDate.toISOString())
+        : "Custom Start";
+      const endLabel = options.customEndDate
+        ? formatDate(options.customEndDate.toISOString())
+        : "Custom End";
+      dateRangeLabel = `${startLabel} - ${endLabel}`;
+      break;
+    }
+    default:
+      dateRangeLabel = "Trip Export";
   }
 
   return {
@@ -195,178 +259,9 @@ export const calculateSummary = (
 };
 
 // Generate filename
-export const generateFileName = (
-  format: "excel" | "pdf",
-  dateRange: string
-): string => {
+export const generateFileName = (dateRange: string): string => {
   const timestamp = new Date().toISOString().split("T")[0].replace(/-/g, "");
-  const extension = format === "excel" ? "xlsx" : "pdf";
-  return `trips_export_${format}_${dateRange}_${timestamp}.${extension}`;
-};
-
-// Export to Excel (saves to Downloads folder)
-export const exportToExcel = async (
-  trips: Trip[],
-  options: ExportOptions
-): Promise<{ success: boolean; message: string; filePath?: string }> => {
-  try {
-    // Filter trips
-    const filteredTrips = filterTripsByDateRange(trips, options);
-
-    if (filteredTrips.length === 0) {
-      return {
-        success: false,
-        message: "No trips found in the selected date range",
-      };
-    }
-
-    // Format data
-    const formattedTrips = formatTripDataForExport(filteredTrips);
-    const summary = calculateSummary(filteredTrips, options);
-
-    // Create workbook
-    const wb = XLSX.utils.book_new();
-
-    // Create Trip Data sheet
-    const tripData = formattedTrips.map((trip) => ({
-      "Trip ID": trip.id,
-      "Start Date": trip.startDate,
-      "Start Time": trip.startTime,
-      "End Date": trip.endDate,
-      "End Time": trip.endTime,
-      "Starting Odometer": trip.startingOdometer,
-      "Ending Odometer": trip.endingOdometer,
-      Distance: trip.distance,
-      Duration: trip.duration,
-      "Earnings (AUD)": trip.earnings,
-    }));
-
-    const wsTrips = XLSX.utils.json_to_sheet(tripData);
-    XLSX.utils.book_append_sheet(wb, wsTrips, "Trip Data");
-
-    // Create Summary sheet
-    const summaryData = [
-      ["Trip Export Summary"],
-      [],
-      ["Export Date", summary.exportDate],
-      ["Date Range", summary.dateRangeLabel],
-      [],
-      ["Total Trips", summary.totalTrips],
-      ["Total Distance", summary.totalDistance],
-      ["Average Distance", summary.avgDistance],
-      ["Total Duration", summary.totalDuration],
-      ["Average Duration", summary.avgDuration],
-      ["Total Earnings", summary.totalEarnings],
-      ["Average Earnings", summary.avgEarnings],
-    ];
-
-    const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
-    XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
-
-    // Write to file in Documents directory (iOS/Android accessible location)
-    const wbout = XLSX.write(wb, { type: "base64", bookType: "xlsx" });
-    const fileName = generateFileName("excel", options.dateRange);
-    const file = new File(Paths.document, fileName);
-
-    await file.write(wbout);
-
-    return {
-      success: true,
-      message: `Excel file saved successfully: ${fileName}`,
-      filePath: file.uri,
-    };
-  } catch (error) {
-    console.error("Excel export error:", error);
-    return {
-      success: false,
-      message: `Export failed: ${error}`,
-    };
-  }
-};
-
-// Share Excel file via native share dialog
-export const shareExcelFile = async (
-  trips: Trip[],
-  options: ExportOptions
-): Promise<{ success: boolean; message: string; filePath?: string }> => {
-  try {
-    // Filter trips
-    const filteredTrips = filterTripsByDateRange(trips, options);
-
-    if (filteredTrips.length === 0) {
-      return {
-        success: false,
-        message: "No trips found in the selected date range",
-      };
-    }
-
-    // Format data
-    const formattedTrips = formatTripDataForExport(filteredTrips);
-    const summary = calculateSummary(filteredTrips, options);
-
-    // Create workbook
-    const wb = XLSX.utils.book_new();
-
-    // Create Trip Data sheet
-    const tripData = formattedTrips.map((trip) => ({
-      "Trip ID": trip.id,
-      "Start Date": trip.startDate,
-      "Start Time": trip.startTime,
-      "End Date": trip.endDate,
-      "End Time": trip.endTime,
-      "Starting Odometer": trip.startingOdometer,
-      "Ending Odometer": trip.endingOdometer,
-      Distance: trip.distance,
-      Duration: trip.duration,
-      "Earnings (AUD)": trip.earnings,
-    }));
-
-    const wsTrips = XLSX.utils.json_to_sheet(tripData);
-    XLSX.utils.book_append_sheet(wb, wsTrips, "Trip Data");
-
-    // Create Summary sheet
-    const summaryData = [
-      ["Trip Export Summary"],
-      [],
-      ["Export Date", summary.exportDate],
-      ["Date Range", summary.dateRangeLabel],
-      [],
-      ["Total Trips", summary.totalTrips],
-      ["Total Distance", summary.totalDistance],
-      ["Average Distance", summary.avgDistance],
-      ["Total Duration", summary.totalDuration],
-      ["Average Duration", summary.avgDuration],
-      ["Total Earnings", summary.totalEarnings],
-      ["Average Earnings", summary.avgEarnings],
-    ];
-
-    const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
-    XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
-
-    // Write to file
-    const wbout = XLSX.write(wb, { type: "base64", bookType: "xlsx" });
-    const fileName = generateFileName("excel", options.dateRange);
-    const file = new File(Paths.cache, fileName);
-
-    await file.write(wbout);
-
-    // Share file
-    if (await Sharing.isAvailableAsync()) {
-      await Sharing.shareAsync(file.uri);
-    }
-
-    return {
-      success: true,
-      message: "Excel file shared successfully",
-      filePath: file.uri,
-    };
-  } catch (error) {
-    console.error("Excel share error:", error);
-    return {
-      success: false,
-      message: `Share failed: ${error}`,
-    };
-  }
+  return `trips_export_pdf_${dateRange}_${timestamp}.pdf`;
 };
 
 // Export to PDF (saves to Downloads folder)
@@ -554,7 +449,7 @@ export const exportToPDF = async (
     `;
 
     // Generate PDF to Documents directory (iOS/Android accessible location)
-    const fileName = generateFileName("pdf", options.dateRange);
+    const fileName = generateFileName(options.dateRange);
     const { uri } = await Print.printToFileAsync({
       html,
       base64: false,
