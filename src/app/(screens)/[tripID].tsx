@@ -12,7 +12,7 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
-import COLORS from "../../assets/colors";
+import { COLORS } from "../../assets/colors";
 import { Trip } from "../../data/tripdata";
 import { tripService } from "../../functions/tripService";
 
@@ -51,7 +51,7 @@ const TripDetail = () => {
         } else {
           setTrip(data);
         }
-      } catch (err) {
+      } catch {
         setError("Failed to fetch trip");
       } finally {
         setLoading(false);
@@ -76,7 +76,7 @@ const TripDetail = () => {
           end: data?.endPhotoUrl ?? null,
         });
         setPhotosError(error ? "Unable to load photos" : null);
-      } catch (err) {
+      } catch {
         if (!isMounted) return;
         setPhotosError("Unable to load photos");
       } finally {

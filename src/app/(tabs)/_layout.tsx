@@ -1,6 +1,5 @@
-import { StyleSheet, Text, View } from "react-native";
-import React from "react";
 import { Tabs } from "expo-router";
+import React from "react";
 import {
   HomeFilledIcon,
   HomeIcon,
@@ -42,5 +41,3 @@ const TabsLayout = () => {
 };
 
 export default TabsLayout;
-
-const styles = StyleSheet.create({});

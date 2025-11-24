@@ -1,13 +1,12 @@
 import React from "react";
 import {
-  TouchableOpacity,
-  Text,
-  StyleSheet,
   GestureResponderEvent,
-  ViewStyle,
+  Text,
   TextStyle,
+  TouchableOpacity,
+  ViewStyle,
 } from "react-native";
-import COLORS from "../assets/colors";
+import { COLORS } from "../assets/colors";
 
 type Variant = "primary" | "outline" | "ghost" | "danger" | "success";
 type Size = "sm" | "md" | "lg";
@@ -141,5 +140,3 @@ export default function AppButton({
     </TouchableOpacity>
   );
 }
-
-const styles = StyleSheet.create({});

@@ -10,7 +10,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-import COLORS from "../../assets/colors";
+import { COLORS } from "../../assets/colors";
 import AppButton from "../../components/AppButton";
 import TripPhotoCapture from "../../components/TripPhotoCapture";
 import { useTripContext } from "../../context/TripContext";

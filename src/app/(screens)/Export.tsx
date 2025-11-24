@@ -14,7 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import COLORS from "../../assets/colors";
+import { COLORS } from "../../assets/colors";
 import AppButton from "../../components/AppButton";
 import { Trip } from "../../data/tripdata";
 import {
@@ -55,7 +55,7 @@ const Export = () => {
   const [showCustomDatePicker, setShowCustomDatePicker] = useState<
     "start" | "end" | null
   >(null);
-  const [includePhotos, setIncludePhotos] = useState(false);
+  const includePhotos = false;
   const [fetchedTrips, setFetchedTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);

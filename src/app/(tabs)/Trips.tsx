@@ -10,7 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import COLORS from "../../assets/colors";
+import { COLORS } from "../../assets/colors";
 import { Trip } from "../../data/tripdata";
 import { tripService } from "../../functions/tripService";
 
