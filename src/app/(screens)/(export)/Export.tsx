@@ -14,15 +14,15 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { COLORS } from "../../assets/colors";
-import AppButton from "../../components/AppButton";
-import { Trip } from "../../data/tripdata";
+import { COLORS } from "../../../assets/colors";
+import AppButton from "../../../components/AppButton";
+import { Trip } from "../../../data/tripdata";
 import {
   ExportOptions,
   exportToPDF,
   sharePDFFile,
-} from "../../functions/exportService";
-import { tripService } from "../../functions/tripService";
+} from "../../../functions/exportService";
+import { tripService } from "../../../functions/tripService";
 
 const getDefaultCustomStartDate = (): Date => {
   const start = new Date();
