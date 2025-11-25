@@ -8,13 +8,43 @@ const RootLayoutContent = () => {
   const { is_trip_active } = useTripContext();
   const pathname = usePathname();
 
+  console.log("Current pathname:", pathname);
+
+  const isOnReceiptsTab = pathname.includes("Reciepts");
+
   const shouldHideButton =
     pathname.includes("StartTrip") ||
     pathname.includes("EndTrip") ||
+    pathname.includes("AddReceipt") ||
     pathname.includes("Export") ||
+    pathname.includes("receiptID") ||
+    pathname.includes("tripID") ||
     (pathname.match(/\/[^/]+$/) &&
       pathname !== "/" &&
-      !pathname.includes("(tabs)"));
+      !pathname.includes("(tabs)") &&
+      !pathname.includes("Reciepts"));
+
+  const handleButtonPress = () => {
+    if (isOnReceiptsTab) {
+      router.push("/(screens)/AddReceipt");
+    } else if (!is_trip_active) {
+      router.push("/(screens)/StartTrip");
+    } else {
+      router.push("/(screens)/EndTrip");
+    }
+  };
+
+  const getButtonVariant = () => {
+    if (isOnReceiptsTab) return "primary";
+    return is_trip_active ? "danger" : "primary";
+  };
+
+  const getButtonIcon = () => {
+    if (isOnReceiptsTab) {
+      return <StartTripIcon />;
+    }
+    return is_trip_active ? <EndTripIcon /> : <StartTripIcon />;
+  };
 
   return (
     <>
@@ -25,19 +55,13 @@ const RootLayoutContent = () => {
       {!shouldHideButton && (
         <View style={styles.buttonContainer}>
           <AppButton
-            onPress={() => {
-              if (!is_trip_active) {
-                router.push("/(screens)/StartTrip");
-              } else {
-                router.push("/(screens)/EndTrip");
-              }
-            }}
+            onPress={handleButtonPress}
             size="lg"
-            variant={is_trip_active ? "danger" : "primary"}
+            variant={getButtonVariant()}
             shape="circle"
             style={styles.button}
           >
-            {is_trip_active ? <EndTripIcon /> : <StartTripIcon />}
+            {getButtonIcon()}
           </AppButton>
         </View>
       )}

@@ -1,9 +1,11 @@
 import { router } from "expo-router";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Modal,
   Pressable,
+  RefreshControl,
   StyleSheet,
   Text,
   TextInput,
@@ -18,12 +20,13 @@ import {
   receiptService,
 } from "../../functions/receiptService";
 
-type QuickRangeKey = "today" | "thisWeek" | "thisMonth";
+type QuickRangeKey = "all" | "today" | "thisWeek" | "thisMonth";
 
 const QUICK_RANGE_OPTIONS: { key: QuickRangeKey; label: string }[] = [
+  { key: "all", label: "All" },
   { key: "today", label: "Today" },
-  { key: "thisWeek", label: "This Week" },
-  { key: "thisMonth", label: "This Month" },
+  { key: "thisWeek", label: "Week" },
+  { key: "thisMonth", label: "Month" },
 ];
 
 const formatDateForDisplay = (value: string): string => {
@@ -40,6 +43,16 @@ const formatForQuery = (date: Date): string => date.toISOString().split("T")[0];
 const getRangeForQuickKey = (key: QuickRangeKey) => {
   const now = new Date();
   switch (key) {
+    case "all": {
+      // Return a very wide range that includes all receipts
+      const startDate = new Date(2000, 0, 1); // Jan 1, 2000
+      const endDate = new Date();
+      endDate.setFullYear(endDate.getFullYear() + 10); // 10 years in future
+      return {
+        startDate: formatForQuery(startDate),
+        endDate: formatForQuery(endDate),
+      };
+    }
     case "today": {
       return {
         startDate: formatForQuery(new Date(now.setHours(0, 0, 0, 0))),
@@ -72,13 +85,15 @@ const getRangeForQuickKey = (key: QuickRangeKey) => {
 };
 
 const parseAmount = (value: string): number | undefined => {
+  if (!value || value.trim() === "") return undefined;
   const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : undefined;
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
 };
 
 const Reciepts = () => {
   const [receipts, setReceipts] = useState<ReceiptRecord[]>([]);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<
@@ -89,20 +104,26 @@ const Reciepts = () => {
   const [endDateInput, setEndDateInput] = useState("");
   const [minAmount, setMinAmount] = useState("");
   const [maxAmount, setMaxAmount] = useState("");
+  const [showFiltersModal, setShowFiltersModal] = useState(false);
 
-  const activeRange = useMemo(
-    () => getRangeForQuickKey(quickRange),
-    [quickRange]
-  );
+  const activeRange = useMemo(() => {
+    const range = getRangeForQuickKey(quickRange);
+    console.log("Active range for", quickRange, ":", range);
+    return range;
+  }, [quickRange]);
 
-  useEffect(() => {
-    let isMounted = true;
-    const fetch = async () => {
-      setLoading(true);
+  const fetchReceipts = useCallback(
+    async (isRefreshing = false) => {
+      if (isRefreshing) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
       setError(null);
       try {
         const rangeStart = startDateInput || activeRange.startDate;
         const rangeEnd = endDateInput || activeRange.endDate;
+
         const { data, error } = await receiptService.queryReceipts({
           search: searchTerm || undefined,
           category: selectedCategory || undefined,
@@ -111,38 +132,40 @@ const Reciepts = () => {
           minAmount: parseAmount(minAmount),
           maxAmount: parseAmount(maxAmount),
         });
-        if (isMounted) {
-          setReceipts(data ?? []);
-          if (error) {
-            setError(error.message ?? "Unable to load receipts");
-          }
+
+        setReceipts(data ?? []);
+        if (error) {
+          setError(error.message ?? "Unable to load receipts");
         }
       } catch (fetchError) {
-        if (isMounted) {
-          console.error("receipt fetch failed", fetchError);
-          setError("Unable to load receipts");
-        }
+        console.error("receipt fetch failed", fetchError);
+        setError("Unable to load receipts");
       } finally {
-        if (isMounted) {
+        if (isRefreshing) {
+          setRefreshing(false);
+        } else {
           setLoading(false);
         }
       }
-    };
+    },
+    [
+      searchTerm,
+      selectedCategory,
+      startDateInput,
+      endDateInput,
+      minAmount,
+      maxAmount,
+      activeRange,
+    ]
+  );
 
-    fetch();
-    return () => {
-      isMounted = false;
-    };
-  }, [
-    searchTerm,
-    selectedCategory,
-    quickRange,
-    startDateInput,
-    endDateInput,
-    minAmount,
-    maxAmount,
-    activeRange,
-  ]);
+  useEffect(() => {
+    fetchReceipts();
+  }, [fetchReceipts]);
+
+  const onRefresh = useCallback(() => {
+    fetchReceipts(true);
+  }, [fetchReceipts]);
 
   const totalAmount = useMemo(() => {
     return receipts.reduce((sum, receipt) => sum + receipt.total_amount, 0);
@@ -151,7 +174,7 @@ const Reciepts = () => {
   const handleClearFilters = () => {
     setSearchTerm("");
     setSelectedCategory("");
-    setQuickRange("thisMonth");
+    setQuickRange("all");
     setStartDateInput("");
     setEndDateInput("");
     setMinAmount("");
@@ -196,162 +219,208 @@ const Reciepts = () => {
     <View style={styles.page}>
       <View style={styles.header}>
         <Text style={styles.title}>Receipts</Text>
-        <Text style={styles.subTitle}>
+        <Text style={styles.subtitle}>
           {receipts.length} receipt{receipts.length === 1 ? "" : "s"} • $
           {totalAmount.toFixed(2)}
         </Text>
       </View>
 
-      <View style={styles.searchRow}>
-        <TextInput
-          style={styles.input}
-          placeholder="Search vendor, category, description"
-          value={searchTerm}
-          onChangeText={setSearchTerm}
-          returnKeyType="search"
-          clearButtonMode="while-editing"
-        />
-      </View>
-
-      <View style={styles.quickFilters}>
-        {QUICK_RANGE_OPTIONS.map((option) => (
-          <Pressable
-            key={option.key}
-            style={({ pressed }) => [
-              styles.quickButton,
-              quickRange === option.key && styles.quickButtonActive,
-              pressed && { opacity: 0.6 },
-            ]}
-            onPress={() => setQuickRange(option.key)}
+      <View style={styles.container}>
+        <View style={styles.searchRow}>
+          <TextInput
+            style={styles.input}
+            placeholder="Search vendor, category, description"
+            value={searchTerm}
+            onChangeText={setSearchTerm}
+            returnKeyType="search"
+            clearButtonMode="while-editing"
+          />
+          <AppButton
+            variant="outline"
+            size="sm"
+            onPress={() => setShowFiltersModal(true)}
+            style={styles.filterButton}
           >
-            <Text
-              style={[
-                styles.quickLabel,
-                quickRange === option.key && styles.quickLabelActive,
+            Filters
+          </AppButton>
+        </View>
+
+        <View style={styles.actionBar}>
+          {QUICK_RANGE_OPTIONS.map((option) => (
+            <Pressable
+              key={option.key}
+              style={({ pressed }) => [
+                styles.quickButton,
+                quickRange === option.key && styles.quickButtonActive,
+                pressed && { opacity: 0.6 },
               ]}
+              onPress={() => setQuickRange(option.key)}
             >
-              {option.label}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
-
-      <View style={styles.filterRow}>
-        <View style={styles.filterColumn}>
-          <Text style={styles.filterLabel}>Start Date</Text>
-          <TextInput
-            style={styles.filterInput}
-            placeholder={activeRange.startDate}
-            value={startDateInput}
-            onChangeText={setStartDateInput}
-            keyboardType="numeric"
-          />
-        </View>
-        <View style={styles.filterColumn}>
-          <Text style={styles.filterLabel}>End Date</Text>
-          <TextInput
-            style={styles.filterInput}
-            placeholder={activeRange.endDate}
-            value={endDateInput}
-            onChangeText={setEndDateInput}
-            keyboardType="numeric"
-          />
-        </View>
-      </View>
-
-      <View style={styles.filterRow}>
-        <View style={styles.filterColumn}>
-          <Text style={styles.filterLabel}>Category</Text>
-          <View style={styles.categoryRow}>
-            <FlatList
-              data={receiptCategories}
-              horizontal
-              keyExtractor={(category) => category}
-              renderItem={({ item }) => (
-                <Pressable
-                  onPress={() =>
-                    setSelectedCategory((prev) => (prev === item ? "" : item))
-                  }
-                  style={({ pressed }) => [
-                    styles.categoryChip,
-                    selectedCategory === item && styles.categoryChipActive,
-                    pressed && { opacity: 0.7 },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.categoryText,
-                      selectedCategory === item && styles.categoryTextActive,
-                    ]}
-                  >
-                    {item}
-                  </Text>
-                </Pressable>
-              )}
-              showsHorizontalScrollIndicator={false}
-            />
-          </View>
-        </View>
-      </View>
-
-      <View style={styles.filterRow}>
-        <View style={styles.filterColumn}>
-          <Text style={styles.filterLabel}>Min Amount</Text>
-          <TextInput
-            style={styles.filterInput}
-            value={minAmount}
-            onChangeText={setMinAmount}
-            placeholder="0.00"
-            keyboardType="decimal-pad"
-          />
-        </View>
-        <View style={styles.filterColumn}>
-          <Text style={styles.filterLabel}>Max Amount</Text>
-          <TextInput
-            style={styles.filterInput}
-            value={maxAmount}
-            onChangeText={setMaxAmount}
-            placeholder="0.00"
-            keyboardType="decimal-pad"
-          />
-        </View>
-      </View>
-
-      <View style={styles.actionRow}>
-        <AppButton
-          variant="outline"
-          size="sm"
-          onPress={handleClearFilters}
-          style={styles.clearButton}
-        >
-          Clear Filters
-        </AppButton>
-        <Text style={styles.rangeNote}>
-          Showing data from {startDateInput || activeRange.startDate} to{" "}
-          {endDateInput || activeRange.endDate}
-        </Text>
-      </View>
-
-      {loading ? (
-        <View style={styles.loader}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
-        </View>
-      ) : (
-        <FlatList
-          data={receipts}
-          renderItem={renderItem}
-          keyExtractor={(item) => item.id}
-          ListEmptyComponent={() => (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>
-                No receipts found for this filter.
+              <Text
+                style={[
+                  styles.quickLabel,
+                  quickRange === option.key && styles.quickLabelActive,
+                ]}
+              >
+                {option.label}
               </Text>
+            </Pressable>
+          ))}
+        </View>
+
+        <Modal
+          visible={showFiltersModal}
+          animationType="slide"
+          transparent
+          onRequestClose={() => setShowFiltersModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Filter Receipts</Text>
+                <Pressable
+                  onPress={() => setShowFiltersModal(false)}
+                  style={styles.modalClose}
+                >
+                  <Text style={styles.modalCloseText}>✕</Text>
+                </Pressable>
+              </View>
+
+              <View style={styles.filterRow}>
+                <View style={styles.filterColumn}>
+                  <Text style={styles.filterLabel}>Start Date</Text>
+                  <TextInput
+                    style={styles.filterInput}
+                    placeholder={activeRange.startDate}
+                    value={startDateInput}
+                    onChangeText={setStartDateInput}
+                    keyboardType="numeric"
+                  />
+                </View>
+                <View style={styles.filterColumn}>
+                  <Text style={styles.filterLabel}>End Date</Text>
+                  <TextInput
+                    style={styles.filterInput}
+                    placeholder={activeRange.endDate}
+                    value={endDateInput}
+                    onChangeText={setEndDateInput}
+                    keyboardType="numeric"
+                  />
+                </View>
+              </View>
+
+              <View style={styles.filterRow}>
+                <View style={styles.filterColumn}>
+                  <Text style={styles.filterLabel}>Category</Text>
+                  <View style={styles.categoryRow}>
+                    <FlatList
+                      data={receiptCategories}
+                      horizontal
+                      keyExtractor={(category) => category}
+                      renderItem={({ item }) => (
+                        <Pressable
+                          onPress={() =>
+                            setSelectedCategory((prev) =>
+                              prev === item ? "" : item
+                            )
+                          }
+                          style={({ pressed }) => [
+                            styles.categoryChip,
+                            selectedCategory === item &&
+                              styles.categoryChipActive,
+                            pressed && { opacity: 0.7 },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.categoryText,
+                              selectedCategory === item &&
+                                styles.categoryTextActive,
+                            ]}
+                          >
+                            {item}
+                          </Text>
+                        </Pressable>
+                      )}
+                      showsHorizontalScrollIndicator={false}
+                    />
+                  </View>
+                </View>
+              </View>
+
+              <View style={styles.filterRow}>
+                <View style={styles.filterColumn}>
+                  <Text style={styles.filterLabel}>Min Amount</Text>
+                  <TextInput
+                    style={styles.filterInput}
+                    value={minAmount}
+                    onChangeText={setMinAmount}
+                    placeholder="0.00"
+                    keyboardType="decimal-pad"
+                  />
+                </View>
+                <View style={styles.filterColumn}>
+                  <Text style={styles.filterLabel}>Max Amount</Text>
+                  <TextInput
+                    style={styles.filterInput}
+                    value={maxAmount}
+                    onChangeText={setMaxAmount}
+                    placeholder="0.00"
+                    keyboardType="decimal-pad"
+                  />
+                </View>
+              </View>
+
+              <View style={styles.modalActions}>
+                <AppButton
+                  variant="outline"
+                  size="sm"
+                  onPress={handleClearFilters}
+                  style={styles.modalActionButton}
+                >
+                  Clear Filters
+                </AppButton>
+                <AppButton
+                  size="sm"
+                  onPress={() => setShowFiltersModal(false)}
+                  style={styles.modalActionButton}
+                >
+                  Apply Filters
+                </AppButton>
+              </View>
             </View>
-          )}
-          contentContainerStyle={styles.listContent}
-        />
-      )}
-      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+          </View>
+        </Modal>
+
+        {loading ? (
+          <View style={styles.loader}>
+            <ActivityIndicator size="large" color={COLORS.primary} />
+          </View>
+        ) : (
+          <FlatList
+            data={receipts}
+            renderItem={renderItem}
+            keyExtractor={(item) => item.id}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={[COLORS.primary]}
+                tintColor={COLORS.primary}
+              />
+            }
+            ListEmptyComponent={() => (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyText}>
+                  No receipts found for this filter.
+                </Text>
+              </View>
+            )}
+            contentContainerStyle={styles.listContent}
+          />
+        )}
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+      </View>
     </View>
   );
 };
@@ -360,25 +429,36 @@ const styles = StyleSheet.create({
   page: {
     flex: 1,
     backgroundColor: COLORS.background,
-    padding: 16,
   },
   header: {
-    marginBottom: 12,
+    paddingHorizontal: 20,
+    paddingTop: 60,
+    paddingBottom: 20,
+    backgroundColor: COLORS.primary,
   },
   title: {
-    fontSize: 26,
-    fontWeight: "700",
-    color: COLORS.text,
+    fontSize: 28,
+    fontWeight: "bold",
+    color: "#fff",
+    marginBottom: 4,
   },
-  subTitle: {
+  subtitle: {
     fontSize: 14,
-    color: COLORS.muted,
-    marginTop: 4,
+    color: "#fff",
+    opacity: 0.9,
+  },
+  container: {
+    padding: 16,
+    paddingBottom: 100,
+    height: "100%",
   },
   searchRow: {
     marginBottom: 12,
+    flexDirection: "row",
+    gap: 8,
   },
   input: {
+    flex: 1,
     backgroundColor: COLORS.card,
     paddingHorizontal: 16,
     paddingVertical: 10,
@@ -386,10 +466,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: COLORS.text,
   },
-  quickFilters: {
+  filterButton: {
+    borderRadius: 999,
+  },
+  actionBar: {
     flexDirection: "row",
+    alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 8,
+    marginBottom: 15,
+    gap: 8,
   },
   quickButton: {
     paddingHorizontal: 12,
@@ -397,6 +482,8 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     borderWidth: 1,
     borderColor: COLORS.muted,
+    flex: 1,
+    alignItems: "center",
   },
   quickButtonActive: {
     backgroundColor: COLORS.primary,
@@ -530,6 +617,51 @@ const styles = StyleSheet.create({
     color: COLORS.danger,
     textAlign: "center",
     marginTop: 8,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
+  },
+  modalContent: {
+    backgroundColor: COLORS.background,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 20,
+    maxHeight: "85%",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: COLORS.text,
+  },
+  modalClose: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: COLORS.card,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalCloseText: {
+    fontSize: 20,
+    color: COLORS.muted,
+  },
+  modalActions: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 12,
+    marginTop: 16,
+  },
+  modalActionButton: {
+    flex: 1,
+    borderRadius: 999,
   },
 });
 

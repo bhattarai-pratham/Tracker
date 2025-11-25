@@ -3,6 +3,8 @@ import React from "react";
 import {
   HomeFilledIcon,
   HomeIcon,
+  RecieptsFilledIcon,
+  RecieptsIcon,
   TripsFilledIcon,
   TripsIcon,
 } from "../../assets/Icons";
@@ -32,6 +34,19 @@ const TabsLayout = () => {
               <TripsFilledIcon color={color} size={size} />
             ) : (
               <TripsIcon color={color} size={size} />
+            ),
+          headerShown: false,
+        }}
+      />
+      <Tabs.Screen
+        name="Reciepts"
+        options={{
+          title: "Receipts",
+          tabBarIcon: ({ color, size, focused }) =>
+            focused ? (
+              <RecieptsFilledIcon color={color} size={size} />
+            ) : (
+              <RecieptsIcon color={color} size={size} />
             ),
           headerShown: false,
         }}

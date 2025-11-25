@@ -1,5 +1,5 @@
-import React from "react";
 import { Ionicons } from "@expo/vector-icons";
+import React from "react";
 
 const HomeIcon = ({
   size = 24,
@@ -61,11 +61,44 @@ const EndTripIcon = ({
   return <Ionicons name="close-outline" size={size} color={color} />;
 };
 
+const ScanReceiptIcon = ({
+  size = 24,
+  color = "black",
+}: {
+  size?: number;
+  color?: string;
+}) => {
+  return <Ionicons name="barcode-outline" size={size} color={color} />;
+};
+
+const RecieptsIcon = ({
+  size = 24,
+  color = "black",
+}: {
+  size?: number;
+  color?: string;
+}) => {
+  return <Ionicons name="receipt-outline" size={size} color={color} />;
+};
+
+const RecieptsFilledIcon = ({
+  size = 24,
+  color = "black",
+}: {
+  size?: number;
+  color?: string;
+}) => {
+  return <Ionicons name="receipt" size={size} color={color} />;
+};
+
 export {
-  HomeIcon,
-  HomeFilledIcon,
-  TripsIcon,
-  TripsFilledIcon,
-  StartTripIcon,
   EndTripIcon,
+  HomeFilledIcon,
+  HomeIcon,
+  RecieptsFilledIcon,
+  RecieptsIcon,
+  ScanReceiptIcon,
+  StartTripIcon,
+  TripsFilledIcon,
+  TripsIcon,
 };

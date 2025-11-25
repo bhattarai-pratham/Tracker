@@ -8,6 +8,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { COLORS } from "../../assets/colors";
 import AppButton from "../../components/AppButton";
 import { ReceiptRecord, receiptService } from "../../functions/receiptService";
@@ -100,54 +101,53 @@ const ReceiptDetail = () => {
   }
 
   return (
-    <ScrollView style={styles.page} contentContainerStyle={styles.content}>
-      <AppButton onPress={() => router.back()} variant="ghost" size="sm">
-        ← Back
-      </AppButton>
-      <Text style={styles.vendor}>{receipt.vendor}</Text>
-      <Text style={styles.category}>{receipt.category}</Text>
-      <Text style={styles.date}>{formatDate(receipt.receipt_date)}</Text>
+    <SafeAreaView style={styles.page}>
+      <ScrollView contentContainerStyle={styles.content}>
+        <Text style={styles.vendor}>{receipt.vendor}</Text>
+        <Text style={styles.category}>{receipt.category}</Text>
+        <Text style={styles.date}>{formatDate(receipt.receipt_date)}</Text>
 
-      {receipt.receipt_image_url ? (
-        <Image
-          source={{ uri: receipt.receipt_image_url }}
-          style={styles.photo}
-          resizeMode="cover"
-        />
-      ) : (
-        <View style={styles.photoPlaceholder}>
-          <Text style={styles.photoPlaceholderText}>No photo attached</Text>
+        {receipt.receipt_image_url ? (
+          <Image
+            source={{ uri: receipt.receipt_image_url }}
+            style={styles.photo}
+            resizeMode="cover"
+          />
+        ) : (
+          <View style={styles.photoPlaceholder}>
+            <Text style={styles.photoPlaceholderText}>No photo attached</Text>
+          </View>
+        )}
+
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Description</Text>
+          <Text style={styles.sectionValue}>
+            {receipt.description ?? "No description"}
+          </Text>
         </View>
-      )}
 
-      <View style={styles.section}>
-        <Text style={styles.sectionLabel}>Description</Text>
-        <Text style={styles.sectionValue}>
-          {receipt.description ?? "No description"}
-        </Text>
-      </View>
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Receipt Date</Text>
+          <Text style={styles.sectionValue}>
+            {formatDate(receipt.receipt_date)}
+          </Text>
+        </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionLabel}>Receipt Date</Text>
-        <Text style={styles.sectionValue}>
-          {formatDate(receipt.receipt_date)}
-        </Text>
-      </View>
+        {summary}
 
-      {summary}
-
-      <View style={styles.section}>
-        <Text style={styles.sectionLabel}>Created At</Text>
-        <Text style={styles.sectionValue}>{receipt.created_at ?? "N/A"}</Text>
-      </View>
-      <AppButton
-        onPress={() => router.back()}
-        variant="outline"
-        style={styles.backButton}
-      >
-        Back to receipts
-      </AppButton>
-    </ScrollView>
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Created At</Text>
+          <Text style={styles.sectionValue}>{receipt.created_at ?? "N/A"}</Text>
+        </View>
+        <AppButton
+          onPress={() => router.back()}
+          variant="outline"
+          style={styles.backButton}
+        >
+          Back to receipts
+        </AppButton>
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 
