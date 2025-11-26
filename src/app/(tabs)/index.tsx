@@ -95,28 +95,31 @@ export default function Dashboard() {
     const totalDurationHours = totalDuration / (1000 * 60 * 60);
     const avgDurationHours = totalDurationHours / totalTrips;
 
-    const longestTrip = completedTrips.reduce((max, trip) => {
-      const distance =
-        Number(trip.ending_odometer) - Number(trip.starting_odometer);
-      return distance > max ? distance : max;
-    }, 0);
-    const shortestTrip = completedTrips.reduce((min, trip) => {
-      const distance =
-        Number(trip.ending_odometer) - Number(trip.starting_odometer);
-      return distance < min ? distance : min;
-    }, Infinity);
+    const distances = completedTrips.map(
+      (trip) => Number(trip.ending_odometer) - Number(trip.starting_odometer)
+    );
+    const longestTrip = distances.length > 0 ? Math.max(...distances) : 0;
+    const shortestTrip = distances.length > 0 ? Math.min(...distances) : 0;
 
     const now = new Date();
-    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    // Current week (Sunday to today)
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay());
+    startOfWeek.setHours(0, 0, 0, 0);
+
     const thisWeekTrips = completedTrips.filter((trip) => {
       const tripDate = new Date(trip.start_timestamp);
-      return tripDate >= weekAgo && tripDate <= now;
+      return tripDate >= startOfWeek && tripDate <= now;
     }).length;
 
-    const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    // Current month (1st of month to today)
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
     const thisMonthTrips = completedTrips.filter((trip) => {
       const tripDate = new Date(trip.start_timestamp);
-      return tripDate >= monthAgo && tripDate <= now;
+      return tripDate >= startOfMonth && tripDate <= now;
     }).length;
 
     const latestTrip = trips[0];
@@ -125,14 +128,16 @@ export default function Dashboard() {
         ? latestTrip.ending_odometer
         : latestTrip?.starting_odometer || "0";
 
-    const avgSpeed = totalDistance / totalDurationHours;
+    const avgSpeed =
+      totalDurationHours > 0 ? totalDistance / totalDurationHours : 0;
     const totalEarnings = completedTrips.reduce(
       (sum, trip) => sum + (trip.earnings || 0),
       0
     );
-    const avgEarningsPerTrip = totalEarnings / totalTrips;
-    const earningsPerHour = totalEarnings / totalDurationHours;
-    const earningsPerKm = totalEarnings / totalDistance;
+    const avgEarningsPerTrip = totalTrips > 0 ? totalEarnings / totalTrips : 0;
+    const earningsPerHour =
+      totalDurationHours > 0 ? totalEarnings / totalDurationHours : 0;
+    const earningsPerKm = totalDistance > 0 ? totalEarnings / totalDistance : 0;
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -146,13 +151,13 @@ export default function Dashboard() {
     const weekEarnings = completedTrips
       .filter((trip) => {
         const d = new Date(trip.start_timestamp);
-        return d >= weekAgo && d <= now;
+        return d >= startOfWeek && d <= now;
       })
       .reduce((sum, trip) => sum + (trip.earnings || 0), 0);
     const monthEarnings = completedTrips
       .filter((trip) => {
         const d = new Date(trip.start_timestamp);
-        return d >= monthAgo && d <= now;
+        return d >= startOfMonth && d <= now;
       })
       .reduce((sum, trip) => sum + (trip.earnings || 0), 0);
 
