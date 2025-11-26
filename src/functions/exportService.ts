@@ -26,7 +26,8 @@ const toStartOfWeek = (date: Date, offsetWeeks = 0): Date => {
   const value = new Date(date);
   value.setHours(0, 0, 0, 0);
   const day = value.getDay();
-  value.setDate(value.getDate() - day + offsetWeeks * 7);
+  const daysFromMonday = day === 0 ? 6 : day - 1; // If Sunday (0), go back 6 days, else go back (day - 1)
+  value.setDate(value.getDate() - daysFromMonday + offsetWeeks * 7);
   return value;
 };
 

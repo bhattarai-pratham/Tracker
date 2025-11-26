@@ -103,9 +103,11 @@ export default function Dashboard() {
 
     const now = new Date();
 
-    // Current week (Sunday to today)
+    // Current week (Monday to Sunday)
     const startOfWeek = new Date(now);
-    startOfWeek.setDate(now.getDate() - now.getDay());
+    const dayOfWeek = now.getDay();
+    const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // If Sunday (0), go back 6 days, else go back (day - 1)
+    startOfWeek.setDate(now.getDate() - daysFromMonday);
     startOfWeek.setHours(0, 0, 0, 0);
 
     const thisWeekTrips = completedTrips.filter((trip) => {

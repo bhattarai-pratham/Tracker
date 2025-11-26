@@ -61,8 +61,9 @@ const getRangeForQuickKey = (key: QuickRangeKey) => {
     }
     case "thisWeek": {
       const start = new Date(now);
-      const offset = start.getDay();
-      start.setDate(start.getDate() - offset);
+      const dayOfWeek = start.getDay();
+      const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // If Sunday (0), go back 6 days, else go back (day - 1)
+      start.setDate(start.getDate() - daysFromMonday);
       start.setHours(0, 0, 0, 0);
       return {
         startDate: formatForQuery(start),

@@ -1,6 +1,23 @@
-# Trip Tracker
+<div align="center">
+  <h1>Trip Tracker</h1>
+  <p>A React Native mobile app for tracking vehicle trips with odometer readings and managing business receipts.</p>
+</div>
 
-A React Native mobile app for tracking vehicle trips with odometer readings and managing business receipts.
+## Screenshots
+
+<div align="center">
+  <img src="./src/assets/images/app_images/Screenshot 2025-11-26 at 1.42.44 pm.png" width="200" alt="Dashboard"/>
+  <img src="./src/assets/images/app_images/Screenshot 2025-11-26 at 1.42.54 pm.png" width="200" alt="Dashboard Stats"/>
+  <img src="./src/assets/images/app_images/Screenshot 2025-11-26 at 1.43.00 pm.png" width="200" alt="Earnings Analytics"/>
+  <img src="./src/assets/images/app_images/Screenshot 2025-11-26 at 1.43.12 pm.png" width="200" alt="Trip List"/>
+</div>
+
+<div align="center">
+  <img src="./src/assets/images/app_images/Screenshot 2025-11-26 at 1.43.22 pm.png" width="200" alt="Trip Details"/>
+  <img src="./src/assets/images/app_images/Screenshot 2025-11-26 at 1.43.30 pm.png" width="200" alt="Receipts"/>
+  <img src="./src/assets/images/app_images/Screenshot 2025-11-26 at 1.43.43 pm.png" width="200" alt="Start Trip"/>
+  <img src="./src/assets/images/app_images/Screenshot 2025-11-26 at 1.44.00 pm.png" width="200" alt="Export Options"/>
+</div>
 
 ## Why I Built This
 
