@@ -6,17 +6,17 @@
 ## Screenshots
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/bhattarai-pratham/Tracker/master/src/assets/images/app_images/view_dashboard.png" width="250" alt="Dashboard"/>
-  <img src="https://raw.githubusercontent.com/bhattarai-pratham/Tracker/master/src/assets/images/app_images/analyze_kpi.png" width="250" alt="Analyze KPIs"/>
-  <img src="https://raw.githubusercontent.com/bhattarai-pratham/Tracker/master/src/assets/images/app_images/track_you_trip_part1.png" width="250" alt="Track Your Trips"/>
-  <img src="https://raw.githubusercontent.com/bhattarai-pratham/Tracker/master/src/assets/images/app_images/track_you_trip_part2.png" width="250" alt="Trip Details"/>
+  <img src="https://raw.githubusercontent.com/bhattarai-pratham/Tracker/master/src/assets/images/app_images/view_dashboard.png" width="150" alt="Dashboard"/>
+  <img src="https://raw.githubusercontent.com/bhattarai-pratham/Tracker/master/src/assets/images/app_images/analyze_kpi.png" width="150" alt="Analyze KPIs"/>
+  <img src="https://raw.githubusercontent.com/bhattarai-pratham/Tracker/master/src/assets/images/app_images/track_you_trip_part1.png" width="150" alt="Track Your Trips"/>
+  <img src="https://raw.githubusercontent.com/bhattarai-pratham/Tracker/master/src/assets/images/app_images/track_you_trip_part2.png" width="150" alt="Trip Details"/>
 </div>
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/bhattarai-pratham/Tracker/master/src/assets/images/app_images/manage_receipts.png" width="250" alt="Manage Receipts"/>
-  <img src="https://raw.githubusercontent.com/bhattarai-pratham/Tracker/master/src/assets/images/app_images/quick_search.png" width="250" alt="Quick Search"/>
-  <img src="https://raw.githubusercontent.com/bhattarai-pratham/Tracker/master/src/assets/images/app_images/log_miles.png" width="250" alt="Log Miles"/>
-  <img src="https://raw.githubusercontent.com/bhattarai-pratham/Tracker/master/src/assets/images/app_images/export.png" width="250" alt="Export Reports"/>
+  <img src="https://raw.githubusercontent.com/bhattarai-pratham/Tracker/master/src/assets/images/app_images/manage_receipts.png" width="150" alt="Manage Receipts"/>
+  <img src="https://raw.githubusercontent.com/bhattarai-pratham/Tracker/master/src/assets/images/app_images/quick_search.png" width="150" alt="Quick Search"/>
+  <img src="https://raw.githubusercontent.com/bhattarai-pratham/Tracker/master/src/assets/images/app_images/log_miles.png" width="150" alt="Log Miles"/>
+  <img src="https://raw.githubusercontent.com/bhattarai-pratham/Tracker/master/src/assets/images/app_images/export.png" width="150" alt="Export Reports"/>
 </div>
 
 ## Why I Built This
