@@ -6,17 +6,17 @@
 ## Screenshots
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/bhattarai-pratham/Tracker/master/src/assets/images/app_images/Screenshot%202025-11-26%20at%201.42.44%20pm.png" width="200" alt="Dashboard"/>
-  <img src="https://raw.githubusercontent.com/bhattarai-pratham/Tracker/master/src/assets/images/app_images/Screenshot%202025-11-26%20at%201.42.54%20pm.png" width="200" alt="Dashboard Stats"/>
-  <img src="https://raw.githubusercontent.com/bhattarai-pratham/Tracker/master/src/assets/images/app_images/Screenshot%202025-11-26%20at%201.43.00%20pm.png" width="200" alt="Earnings Analytics"/>
-  <img src="https://raw.githubusercontent.com/bhattarai-pratham/Tracker/master/src/assets/images/app_images/Screenshot%202025-11-26%20at%201.43.12%20pm.png" width="200" alt="Trip List"/>
+  <img src="https://raw.githubusercontent.com/bhattarai-pratham/Tracker/master/src/assets/images/app_images/view_dashboard.png" width="200" alt="Dashboard"/>
+  <img src="https://raw.githubusercontent.com/bhattarai-pratham/Tracker/master/src/assets/images/app_images/analyze_kpi.png" width="200" alt="Analyze KPIs"/>
+  <img src="https://raw.githubusercontent.com/bhattarai-pratham/Tracker/master/src/assets/images/app_images/track_you_trip_part1.png" width="200" alt="Track Your Trips"/>
+  <img src="https://raw.githubusercontent.com/bhattarai-pratham/Tracker/master/src/assets/images/app_images/track_you_trip_part2.png" width="200" alt="Trip Details"/>
 </div>
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/bhattarai-pratham/Tracker/master/src/assets/images/app_images/Screenshot%202025-11-26%20at%201.43.22%20pm.png" width="200" alt="Trip Details"/>
-  <img src="https://raw.githubusercontent.com/bhattarai-pratham/Tracker/master/src/assets/images/app_images/Screenshot%202025-11-26%20at%201.43.30%20pm.png" width="200" alt="Receipts"/>
-  <img src="https://raw.githubusercontent.com/bhattarai-pratham/Tracker/master/src/assets/images/app_images/Screenshot%202025-11-26%20at%201.43.43%20pm.png" width="200" alt="Start Trip"/>
-  <img src="https://raw.githubusercontent.com/bhattarai-pratham/Tracker/master/src/assets/images/app_images/Screenshot%202025-11-26%20at%201.44.00%20pm.png" width="200" alt="Export Options"/>
+  <img src="https://raw.githubusercontent.com/bhattarai-pratham/Tracker/master/src/assets/images/app_images/manage_receipts.png" width="200" alt="Manage Receipts"/>
+  <img src="https://raw.githubusercontent.com/bhattarai-pratham/Tracker/master/src/assets/images/app_images/quick_search.png" width="200" alt="Quick Search"/>
+  <img src="https://raw.githubusercontent.com/bhattarai-pratham/Tracker/master/src/assets/images/app_images/log_miles.png" width="200" alt="Log Miles"/>
+  <img src="https://raw.githubusercontent.com/bhattarai-pratham/Tracker/master/src/assets/images/app_images/export.png" width="200" alt="Export Reports"/>
 </div>
 
 ## Why I Built This
