@@ -9,7 +9,7 @@ export const tripService = {
   async getAllTrips(): Promise<{ data: Trip[] | null; error: any }> {
     console.log("Fetching all trips from Supabase...");
     const { data, error } = await supabase
-      .from("trips_dummy")
+      .from("trips")
       .select("*")
       .order("start_timestamp", { ascending: false });
 
@@ -20,7 +20,7 @@ export const tripService = {
 
   async getTripByID(id: string): Promise<{ data: Trip | null; error: any }> {
     const { data, error } = await supabase
-      .from("trips_dummy")
+      .from("trips")
       .select("*")
       .eq("id", id)
       .single();
@@ -34,7 +34,7 @@ export const tripService = {
   }): Promise<{ data: Trip | null; error: any }> {
     console.log("Creating new trip:", tripData);
     const { data, error } = await supabase
-      .from("trips_dummy")
+      .from("trips")
       .insert([
         {
           id: tripData.id,
@@ -63,7 +63,7 @@ export const tripService = {
   ): Promise<{ data: Trip | null; error: any }> {
     console.log("Updating trip end:", { tripId, endData });
     const { data, error } = await supabase
-      .from("trips_dummy")
+      .from("trips")
       .update({
         ending_odometer: endData.ending_odometer,
         end_timestamp: endData.end_timestamp,
@@ -80,7 +80,7 @@ export const tripService = {
   async getActiveTripId(): Promise<{ data: Trip | null; error: any }> {
     console.log("Checking for active trip...");
     const { data, error } = await supabase
-      .from("trips_dummy")
+      .from("trips")
       .select("*")
       .or("end_timestamp.is.null,end_timestamp.eq.")
       .order("start_timestamp", { ascending: false })

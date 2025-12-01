@@ -68,6 +68,8 @@ export default function Dashboard() {
         shortestTrip: "0.0",
         thisWeekTrips: 0,
         thisMonthTrips: 0,
+        lastWeekTrips: 0,
+        lastMonthTrips: 0,
         currentOdometer: "0",
         avgSpeed: "0.0",
         totalEarnings: "0.00",
@@ -115,6 +117,17 @@ export default function Dashboard() {
       return tripDate >= startOfWeek && tripDate <= now;
     }).length;
 
+    // Last week (Monday to Sunday of previous week)
+    const startOfLastWeek = new Date(startOfWeek);
+    startOfLastWeek.setDate(startOfLastWeek.getDate() - 7);
+    const endOfLastWeek = new Date(startOfWeek);
+    endOfLastWeek.setMilliseconds(-1); // Just before current week starts
+
+    const lastWeekTrips = completedTrips.filter((trip) => {
+      const tripDate = new Date(trip.start_timestamp);
+      return tripDate >= startOfLastWeek && tripDate <= endOfLastWeek;
+    }).length;
+
     // Current month (1st of month to today)
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     startOfMonth.setHours(0, 0, 0, 0);
@@ -122,6 +135,17 @@ export default function Dashboard() {
     const thisMonthTrips = completedTrips.filter((trip) => {
       const tripDate = new Date(trip.start_timestamp);
       return tripDate >= startOfMonth && tripDate <= now;
+    }).length;
+
+    // Last month (1st to last day of previous month)
+    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    startOfLastMonth.setHours(0, 0, 0, 0);
+    const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+    endOfLastMonth.setHours(23, 59, 59, 999);
+
+    const lastMonthTrips = completedTrips.filter((trip) => {
+      const tripDate = new Date(trip.start_timestamp);
+      return tripDate >= startOfLastMonth && tripDate <= endOfLastMonth;
     }).length;
 
     const latestTrip = trips[0];
@@ -173,6 +197,8 @@ export default function Dashboard() {
       shortestTrip: shortestTrip.toFixed(1),
       thisWeekTrips,
       thisMonthTrips,
+      lastWeekTrips,
+      lastMonthTrips,
       currentOdometer,
       avgSpeed: avgSpeed.toFixed(1),
       totalEarnings: totalEarnings.toFixed(2),
@@ -558,8 +584,8 @@ export default function Dashboard() {
               >
                 <Ionicons name="calendar" size={20} color="#fff" />
               </View>
-              <Text style={styles.activityValue}>{kpis.thisWeekTrips}</Text>
-              <Text style={styles.activityLabel}>This Week</Text>
+              <Text style={styles.activityValue}>{kpis.lastWeekTrips}</Text>
+              <Text style={styles.activityLabel}>Last Week</Text>
             </View>
 
             <View
@@ -576,8 +602,8 @@ export default function Dashboard() {
               >
                 <Ionicons name="calendar-outline" size={20} color="#fff" />
               </View>
-              <Text style={styles.activityValue}>{kpis.thisMonthTrips}</Text>
-              <Text style={styles.activityLabel}>This Month</Text>
+              <Text style={styles.activityValue}>{kpis.lastMonthTrips}</Text>
+              <Text style={styles.activityLabel}>Last Month</Text>
             </View>
           </View>
         </View>
